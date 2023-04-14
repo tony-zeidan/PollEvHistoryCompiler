@@ -95,7 +95,7 @@ def get_title_and_responses(
         resp_dct['responses'].append(resp)
     
     if 'correct' not in resp_dct:
-        resp_dct['correct'] = None
+        resp_dct['correct'] = no_answer_value
 
     if shuffle:
         random.shuffle(resp_dct['responses'])
