@@ -212,20 +212,23 @@ def to_dict_style(data_df: pd.DataFrame):
     return dct
 
 
-def to_yaml_report(data_df: pd.DataFrame, output_file: str = None, encoding: str = None):
+def to_yaml_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
 
     dct = to_dict_style(data_df)
 
-    with open(output_file, 'w') as out_file:
+    with open(output_file, 'w', encoding=encoding) as out_file:
         yaml.dump(dct, out_file)
 
-def to_json_report(data_df: pd.DataFrame, output_file: str = None, encoding: str = None):
+def to_json_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
 
     dct = to_dict_style(data_df)
 
-    with open(output_file, 'w') as out_file:
+    with open(output_file, 'w', encoding=encoding) as out_file:
         json.dump(dct, out_file)
 
+def to_csv_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+
+    data_df.to_csv(output_file, encoding=encoding)
 
 def main():
     """
@@ -249,6 +252,8 @@ def main():
         to_yaml_report(data_df, os.path.join(args.output_path, f'{name}.yaml'), encoding=args.encoding)
     elif args.transform == 'json':
         to_json_report(data_df, os.path.join(args.output_path, f'{name}.json'), encoding=args.encoding)
+    elif args.transform == 'csv':
+        to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding)
     else:
         raise ValueError("You can't use that type of output transform, look at the docs for help.")
 
