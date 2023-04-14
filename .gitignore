@@ -8,6 +8,7 @@ __pycache__/
 *.yaml
 *.yml
 *.json
+*.html
 
 # C extensions
 *.so

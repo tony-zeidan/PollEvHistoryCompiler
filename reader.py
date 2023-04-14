@@ -69,7 +69,6 @@ def get_title_and_responses(
         response_options_col:str = 'Response options',
         response_options_delim: str = " | ", 
         correct_in_response: str = '(Correct)',
-        no_answer_value: str = None,
         shuffle: bool = True
 ):
     """
@@ -85,17 +84,24 @@ def get_title_and_responses(
     responses = row[response_options_col].split(response_options_delim)  # split the responses
     
     resp_dct = {
-        'responses': []
+        'responses': [],
+        'correct': []
     }
     for resp in responses:
+        resp = remove_question_start(resp, remove_start_len)
+
+        # remove any spaces at the beginning
+        try:
+            while resp[0] == " ":
+                resp = resp[1:]
+        except IndexError:
+            pass
+
         if correct_in_response in resp:
             resp = resp.replace(correct_in_response, "")
-            resp_dct['correct'] = resp
-        
+            resp_dct['correct'].append(resp)
+
         resp_dct['responses'].append(resp)
-    
-    if 'correct' not in resp_dct:
-        resp_dct['correct'] = no_answer_value
 
     if shuffle:
         random.shuffle(resp_dct['responses'])
@@ -140,13 +146,12 @@ def tex_helper(
     strbuilder.append(r'\begin{' + resp_block_type + r'}')
     for resp in responses['responses']:
         resp_new = change_tex_chars(resp)
-        if responses['correct'] == resp:
+        if resp in responses['correct']:
             strbuilder.append(rf"\CorrectChoice {resp_new}\\[{end_spacing}{end_spacing_metric}]")
         else:
             strbuilder.append(rf"\choice {resp_new}\\[{end_spacing}{end_spacing_metric}]")
 
     strbuilder.append(r'\end{' + resp_block_type + r'}' + "\n")
-    print(strbuilder)
 
     return "\n".join(strbuilder)
 
@@ -173,6 +178,80 @@ def to_tex_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None):
             out_file.write(r"\end{questions}" + "\n")
 
         data_df.drop(columns=['strquestion'], inplace=True)
+
+    except KeyError:
+        raise ValueError("Column couldn't be found, can't continue.")
+    
+
+def html_helper(
+        row,
+        correct_class: str = 'correct',
+        incorrect_class: str = 'incorrect',
+        **kwargs
+    ) -> str:
+    """
+    Converts the current row into a HTML block.
+
+
+    :param block_type: The LaTeX block type to use for the question title
+    :param resp_block_type: The LaTeX block type to use for the question responses
+    :param remove_start_len: How far into the string to look when removing the question prefix
+    :param end_spacing: The amount of space to add after each response option
+    :param end_spacing_metric: The metric for end_spacing
+
+    :return: The string representing the LaTeX block
+    """
+
+    strbuilder = []
+
+    responses, title = get_title_and_responses(row, **kwargs)
+    title = change_tex_chars(title)
+
+    strbuilder.append(rf'<li>{title}</li>')
+
+    strbuilder.append('\t<ol type="a">')
+    for resp in responses['responses']:
+        resp_new = resp
+        if resp in responses['correct']:
+            strbuilder.append(f"\t\t<li class={correct_class}>{resp_new}</li>")
+        else:
+            strbuilder.append(f"\t\t<li class={incorrect_class}>{resp_new}</li>")
+
+    strbuilder.append('\t</ol>\n')
+
+    return "\n".join(strbuilder)
+
+def to_html_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+    """
+    Converts the CSV dataframe into a LaTeX exam report.
+
+    :param data_df: The dataframe
+    :param output_file: The file to output to (.TeX)
+    :param encoding: The encoding to use when outputting
+    """
+
+    try: 
+        name, _ = os.path.splitext(output_file)
+
+        html_lst =  '\n'.join(data_df.apply(lambda x: html_helper(x), axis=1))
+
+        html_gen = f'''
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+        <title>{name}</title>
+        </head> 
+        <body>
+        <h1>PollEverywhere Report</h1>           
+        {html_lst}
+        </body>
+        </html>
+        '''
+
+        
+
+        with open(output_file, 'w', encoding=encoding) as out_file:
+            out_file.write(html_gen)
 
     except KeyError:
         raise ValueError("Column couldn't be found, can't continue.")
@@ -246,6 +325,7 @@ def main():
 
     name, _ = os.path.splitext(args.file_path)
 
+    # check transform type
     if args.transform == 'tex':
         to_tex_exam(data_df, os.path.join(args.output_path, f'{name}.tex'), encoding=args.encoding)
     elif args.transform == 'yaml':
@@ -254,6 +334,8 @@ def main():
         to_json_report(data_df, os.path.join(args.output_path, f'{name}.json'), encoding=args.encoding)
     elif args.transform == 'csv':
         to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding)
+    elif args.transform == 'html':
+        to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding)
     else:
         raise ValueError("You can't use that type of output transform, look at the docs for help.")
 
