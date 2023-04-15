@@ -319,6 +319,33 @@ def main():
     parser.add_argument('--output_path', type=str, help='Path for output file (optional)', default=os.getcwd())
     parser.add_argument('--transform', type=str, help='Transform to apply (optional)', default='yaml')
     parser.add_argument('--encoding', type=str, help='Encoding for reading and writing (optional)', default='utf-8')
+    
+    # subparser for individual commands
+    transform_parser = parser.add_subparsers(dest='transform')
+
+    # LaTeX transform
+    parser_tex = transform_parser.add_parser('tex', help='Convert to LaTeX')
+    parser_tex.add_argument('--block_type', type=str, help='LaTeX block type to use for question title', default='question')
+    parser_tex.add_argument('--resp_block_type', type=str, help='LaTeX block type to use for question responses', default='oneparcheckboxes')
+    parser_tex.add_argument('--remove_start_len', type=int, help='How far into the string to look when removing the question prefix', default=4)
+    parser_tex.add_argument('--end_spacing', type=int, help='The amount of space to add after each response option', default=4)
+    parser_tex.add_argument('--end_spacing_metric', type=str, help='The metric for end_spacing', default='pt')
+    
+    # HTML transform
+    parser_html = transform_parser.add_parser('html', help='Convert to HTML')
+
+    # YAML transform
+    parser_yaml = transform_parser.add_parser('yaml', help='Convert to YAML')
+
+    # JSON transform
+    parser_json = transform_parser.add_parser('json', help='Convert to JSON')
+
+    # CSV transform
+    parser_csv = transform_parser.add_parser('csv', help='Convert to CSV')
+
+    # TOML transform
+    parser_csv = transform_parser.add_parser('toml', help='Convert to TOML')
+
     args = parser.parse_args()
     
     data_df = read_csv_file(args.file_path, presenter=args.presenter, encoding=args.encoding)
