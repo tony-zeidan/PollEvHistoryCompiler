@@ -132,6 +132,7 @@ def tex_helper(
         resp_block_type: str = 'oneparcheckboxes',
         resp_opt_block_type: str = 'choice',
         resp_opt_correct_block_type: str = 'CorrectChoice',
+        show_correct: bool = True,
         end_spacing: int = 4,
         end_spacing_metric: str = 'pt',
         **kwargs
@@ -163,7 +164,7 @@ def tex_helper(
     strbuilder.append(r'\begin{' + resp_block_type + r'}')
     for resp in responses['responses']:
         resp_new = change_tex_chars(resp)
-        if resp in responses['correct']:
+        if resp in responses['correct'] and show_correct:
             strbuilder.append(rf"\{resp_opt_correct_block_type} {resp_new}\\[{end_spacing}{end_spacing_metric}]")
         else:
             strbuilder.append(rf"\{resp_opt_block_type} {resp_new}\\[{end_spacing}{end_spacing_metric}]")
@@ -172,7 +173,7 @@ def tex_helper(
 
     return "\n".join(strbuilder)
 
-def to_tex_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None, **kwargs):
+def to_tex_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None, show_correct: bool = True, **kwargs):
     """
     Converts the CSV dataframe into a LaTeX exam report.
 
@@ -182,11 +183,9 @@ def to_tex_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None, *
     :param kwargs: keyword arguments for every tex block
     """
 
-    
-
     try: 
 
-        lst = data_df.apply(lambda x: tex_helper(x, **kwargs), axis=1)
+        lst = data_df.apply(lambda x: tex_helper(x, show_correct=show_correct, **kwargs), axis=1)
 
         tex_gen = r'''
 \documentclass{exam}         
@@ -276,6 +275,7 @@ def html_helper(
         row,
         correct_class: str = 'correct',
         incorrect_class: str = 'incorrect',
+        show_correct: bool = True,
         **kwargs
     ) -> str:
     """
@@ -302,7 +302,10 @@ def html_helper(
     for resp in responses['responses']:
         resp_new = resp
         if resp in responses['correct']:
-            strbuilder.append(f"\t\t<li class={correct_class}>{resp_new}</li>")
+            if show_correct:
+                strbuilder.append(f"\t\t<li class={correct_class}>{resp_new}</li>")
+            else:
+                strbuilder.append(f"\t\t<li>{resp_new}</li>")
         else:
             strbuilder.append(f"\t\t<li class={incorrect_class}>{resp_new}</li>")
 
@@ -325,17 +328,17 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, encoding: str = None
         html_lst =  '\n'.join(data_df.apply(lambda x: html_helper(x), axis=1))
 
         html_gen = f'''
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-        <link rel="stylesheet" href="html-styles.css">
-        <title>{name}</title>
-        </head> 
-        <body>
-        <h1>PollEverywhere Report</h1>           
-        {html_lst}
-        </body>
-        </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="html-styles.css">
+    <title>{name}</title>
+</head> 
+<body>
+    <h1>PollEverywhere Report</h1>           
+    {html_lst}
+</body>
+</html>
         '''
 
         
