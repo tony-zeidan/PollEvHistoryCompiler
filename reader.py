@@ -5,14 +5,21 @@ import yaml
 import json
 import random
 import configparser
-
-
-
+import shutil
 
 TEX_CHARS_ESCAPE = ['%']
 QUESTION_START_CHARS = [')', '.', ']', '&']
 
-def read_csv_file(file_path, presenter:str=None, **kwargs):
+def read_csv_file(
+        file_path,
+        presenter:str=None,
+        rhidden: bool = False,
+        presenter_col: str = 'Presenter',
+        question_col: str = 'Activity title',
+        activity_type_col: str = 'Activity type',
+        multiple_choice_type: str = 'Multiple choice',
+        **kwargs
+    ):
     """
     Read a CSV file into pandas and filter by presenter.
 
@@ -24,9 +31,11 @@ def read_csv_file(file_path, presenter:str=None, **kwargs):
     """
     data_df = pd.read_csv(file_path, **kwargs)
     if presenter is not None:
-        data_df = data_df[data_df["Presenter"] == presenter]
+        data_df = data_df[data_df[presenter_col] == presenter]
 
-    data_df = data_df[data_df["Activity type"] == "Multiple choice"]
+    data_df = data_df[data_df[activity_type_col] == multiple_choice_type]
+    if rhidden:
+        data_df = data_df[data_df[question_col] != "~hidden~"]
 
     return data_df
 
@@ -248,6 +257,7 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, encoding: str = None
         <!DOCTYPE html>
         <html lang="en">
         <head>
+        <link rel="stylesheet" href="html-styles.css">
         <title>{name}</title>
         </head> 
         <body>
@@ -266,8 +276,11 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, encoding: str = None
         raise ValueError("Column couldn't be found, can't continue.")
 
 
-def yaml_helper(row, **kwargs):
+def dict_helper(row, **kwargs):
+    """
+    To Dict helper.
 
+    """
 
     responses, title = get_title_and_responses(row, **kwargs)
 
@@ -292,7 +305,7 @@ def to_dict_style(data_df: pd.DataFrame):
 
     def help(row): 
         nonlocal i
-        dct[str(i)] = yaml_helper(row)
+        dct[str(i)] = dict_helper(row)
         i += 1
 
     data_df.apply(lambda x: help(x), axis=1)
@@ -301,6 +314,10 @@ def to_dict_style(data_df: pd.DataFrame):
 
 
 def to_yaml_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+    """
+    Output to yaml format.
+
+    """
 
     dct = to_dict_style(data_df)
 
@@ -308,6 +325,10 @@ def to_yaml_report(data_df: pd.DataFrame, output_file: str, encoding: str = None
         yaml.dump(dct, out_file)
 
 def to_json_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+    """
+    Output to JSON format.
+
+    """
 
     dct = to_dict_style(data_df)
 
@@ -315,6 +336,11 @@ def to_json_report(data_df: pd.DataFrame, output_file: str, encoding: str = None
         json.dump(dct, out_file)
 
 def to_toml_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+    """
+    Output to TOML format.
+
+    """
+
     import toml
 
     dct = to_dict_style(data_df)
@@ -323,6 +349,11 @@ def to_toml_report(data_df: pd.DataFrame, output_file: str, encoding: str = None
         toml.dump(dct, out_file)
 
 def to_csv_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+    """
+    Output to CSV format.
+
+
+    """
 
     data_df.to_csv(output_file, encoding=encoding)
 
@@ -353,9 +384,10 @@ def update_defaults_config(defaults, config, section) -> dict:
     """
 
     kw = {}
-
     for k in defaults.keys():
         kw[k] = config.get(section, k, fallback=defaults[k])
+        if kw[k] == 'yes' or kw[k] == 'no' or kw=='true' or kw=='false':        # convert booleans from the config file
+            kw[k] = config.getboolean(section, k, fallback=defaults[k]) 
     return kw
 
 def main():
@@ -370,6 +402,7 @@ def main():
         transform = 'csv',
         remove_start_len = 5,
         shuffle_options = True,
+        rhidden = False,
         config = 'config.ini'
     )
 
@@ -404,55 +437,56 @@ def main():
 
 
     config_parser = argparse.ArgumentParser(add_help=False)
-    config_parser.add_argument('--config_path', type=str, help='Path to the configuration file (optional)', default=None)
+    config_parser.add_argument('--config_path', type=str, help='Path to the configuration file (optional)', default=default_io_opts['config'])
     config_args, remaining_argv = config_parser.parse_known_args()
+    print("NO")
 
+
+    default_io_opts['config'] = config_args.config_path
+    print(default_io_opts)
+
+    try:
+        config = configparser.ConfigParser()
+        config.read(default_io_opts['config'])
+        print("CONFIG GOT")
+
+        print(config['pollev_output']['shuffle_options'])
+
+        # i/o and general config
+        default_io_opts.update(update_defaults_config(default_io_opts, config, 'pollev_output'))
+
+        # tex defaults options
+        if default_io_opts['transform'] == 'tex' and 'pollev_transforms.tex' in config:
+            default_tex_opts.update(update_defaults_config(default_tex_opts, config, 'pollev_transforms.tex'))
+
+        elif default_io_opts['transform'] == 'html' and 'pollev_transforms.html' in config:
+            default_html_opts.update(update_defaults_config(default_html_opts, config, 'pollev_transforms.html'))
+
+        elif default_io_opts['transform'] == 'yaml' and 'pollev_transforms.yaml' in config:
+            default_yaml_opts.update(update_defaults_config(default_yaml_opts, config, 'pollev_transforms.yaml'))
+
+        elif default_io_opts['transform'] == 'json' and 'pollev_transforms.json' in config:
+            default_json_opts.update(update_defaults_config(default_json_opts, config, 'pollev_transforms.json'))
+
+        elif default_io_opts['transform'] == 'csv' and 'pollev_transforms.csv' in config:
+            default_csv_opts.update(update_defaults_config(default_csv_opts, config, 'pollev_transforms.csv'))
+
+        elif default_io_opts['transform'] == 'toml' and 'pollev_transforms.toml' in config:
+            default_toml_opts.update(update_defaults_config(default_csv_opts, config, 'pollev_transforms.toml'))
     
-    # allow the user to override defaults using the config path
-    if config_args.config_path:
-
-        default_io_opts['config'] = config_args.config_path
-
-        try:
-            config = configparser.ConfigParser()
-            config.read(default_io_opts['config'])
-
-            print(config['pollev_output']['shuffle_options'])
-
-            # i/o and general config
-            default_io_opts.update(update_defaults_config(default_io_opts, config, 'pollev_output'))
-
-            # tex defaults options
-            if default_io_opts['transform'] == 'tex' and 'pollev_transforms.tex' in config:
-                default_tex_opts.update(update_defaults_config(default_tex_opts, config, 'pollev_transforms.tex'))
-
-            elif default_io_opts['transform'] == 'html' and 'pollev_transforms.html' in config:
-                default_html_opts.update(update_defaults_config(default_html_opts, config, 'pollev_transforms.html'))
-
-            elif default_io_opts['transform'] == 'yaml' and 'pollev_transforms.yaml' in config:
-                default_yaml_opts.update(update_defaults_config(default_yaml_opts, config, 'pollev_transforms.yaml'))
-
-            elif default_io_opts['transform'] == 'json' and 'pollev_transforms.json' in config:
-                default_json_opts.update(update_defaults_config(default_json_opts, config, 'pollev_transforms.json'))
-
-            elif default_io_opts['transform'] == 'csv' and 'pollev_transforms.csv' in config:
-                default_csv_opts.update(update_defaults_config(default_csv_opts, config, 'pollev_transforms.csv'))
-
-            elif default_io_opts['transform'] == 'toml' and 'pollev_transforms.toml' in config:
-                default_toml_opts.update(update_defaults_config(default_csv_opts, config, 'pollev_transforms.toml'))
-        
-        except FileNotFoundError:
-            parser.set_defaults(transform=default_io_opts['transform'])
-            args, _ = parser.parse_known_args(remaining_argv)
-            pass
+    except FileNotFoundError:
+        parser.set_defaults(transform=default_io_opts['transform'])
+        args, _ = parser.parse_known_args(remaining_argv)
+        pass
 
     global_parser = argparse.ArgumentParser(description='Read CSV file with optional screen name filter', add_help=False)
     global_parser.add_argument('--config_path', type=str, help='Path to the configuration file (optional)', default=default_io_opts['config'])
+    global_parser.add_argument('--rhidden', help='Remove questions with hidden titles', default=default_io_opts['rhidden'], action='store_true')
     global_parser.add_argument('--presenter', type=str, help='Presenter name to filter (optional)', default=None)
     global_parser.add_argument('--output_path', type=str, help='Path for output file (optional)', default=default_io_opts['output_path'])
     global_parser.add_argument('--encoding', type=str, help='Encoding for reading and writing (optional)', default=default_io_opts['encoding'])
-    global_parser.add_argument('--shuffle_options', type=bool, help='Whether to shuffle the response options of questions', default=default_io_opts['shuffle_options'])
-    global_parser.add_argument('--remove_start_len', type=int, help='How far into the string to look when removing the question or response prefix', default=default_io_opts['remove_start_len'])
+    global_parser.add_argument('--shuffle_options', help='Whether to shuffle the response options of questions (optional)', default=default_io_opts['shuffle_options'], action='store_true')
+    global_parser.add_argument('--remove_start_len', type=int, help='How far into the string to look when removing the question or response prefix (optional)', default=default_io_opts['remove_start_len'])
 
     # parser for the required file path
     parser = argparse.ArgumentParser(description='Read CSV file with optional screen name filter', parents=[global_parser])
@@ -487,7 +521,7 @@ def main():
 
     parser.set_defaults(transform=default_io_opts['transform'])
     args = parser.parse_args(remaining_argv)
-    data_df = read_csv_file(args.file_path, presenter=args.presenter, encoding=args.encoding)
+    data_df = read_csv_file(args.file_path, presenter=args.presenter, encoding=args.encoding, rhidden=args.rhidden)
 
     name, _ = os.path.splitext(args.file_path)
 
@@ -502,6 +536,10 @@ def main():
         to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding, **update_defaults(args, default_csv_opts))
     elif args.transform == 'html':
         to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding, **update_defaults(args, default_html_opts))
+        try:
+            shutil.copyfile('html-styles.css', os.path.join(args.output_path, f'html-styles.css'))
+        except Exception:
+            pass
     elif args.transform == 'toml':
         to_toml_report(data_df, os.path.join(args.output_path, f'{name}.toml'), encoding=args.encoding, **update_defaults(args, default_toml_opts))
     else:
