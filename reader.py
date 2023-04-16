@@ -570,7 +570,7 @@ def main():
     global_parser = argparse.ArgumentParser(description='Read CSV file with optional screen name filter', add_help=False)
     global_parser.add_argument('--config_path', type=str, help='Path to the configuration file (optional)', default=default_io_opts['config'])
     global_parser.add_argument('--rhidden', help='Remove questions with hidden titles', default=default_io_opts['rhidden'], action='store_true')
-    global_parser.add_argument('--nosolutions', help='Remove solutions', default=not default_io_opts['show_solutions'], action='store_false')
+    global_parser.add_argument('--nosolutions', help='Remove solutions', default=not default_io_opts['show_solutions'], action='store_true')
     global_parser.add_argument('--presenter', type=str, help='Presenter name to filter (optional)', default=None)
     global_parser.add_argument('--output_path', type=str, help='Path for output file (optional)', default=default_io_opts['output_path'])
     global_parser.add_argument('--encoding', type=str, help='Encoding for reading and writing (optional)', default=default_io_opts['encoding'])
@@ -617,25 +617,27 @@ def main():
 
     name, _ = os.path.splitext(args.file_path)
 
+    show_correct = (not args.nosolutions)
+
     # check transform type
     if args.transform == 'tex':
-        to_tex_exam(data_df, os.path.join(args.output_path, f'{name}.tex'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_tex_opts))
+        to_tex_exam(data_df, os.path.join(args.output_path, f'{name}.tex'), encoding=args.encoding, show_correct=show_correct, remove_start_len=args.remove_start_len, **update_defaults(args, default_tex_opts))
     elif args.transform == 'yaml':
-        to_yaml_report(data_df, os.path.join(args.output_path, f'{name}.yaml'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_yaml_opts))
+        to_yaml_report(data_df, os.path.join(args.output_path, f'{name}.yaml'), encoding=args.encoding, show_correct=show_correct, remove_start_len=args.remove_start_len, **update_defaults(args, default_yaml_opts))
     elif args.transform == 'json':
-        to_json_report(data_df, os.path.join(args.output_path, f'{name}.json'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_json_opts))
+        to_json_report(data_df, os.path.join(args.output_path, f'{name}.json'), encoding=args.encoding, show_correct=show_correct, remove_start_len=args.remove_start_len, **update_defaults(args, default_json_opts))
     elif args.transform == 'csv':
-        to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_csv_opts))
+        to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding, show_correct=show_correct, remove_start_len=args.remove_start_len, **update_defaults(args, default_csv_opts))
     elif args.transform == 'html':
-        to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_html_opts))
+        to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding, show_correct=show_correct, remove_start_len=args.remove_start_len, **update_defaults(args, default_html_opts))
         try:
             shutil.copyfile('html-styles.css', os.path.join(args.output_path, f'html-styles.css'))
         except Exception:
             pass
     elif args.transform == 'toml':
-        to_toml_report(data_df, os.path.join(args.output_path, f'{name}.toml'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_toml_opts))
+        to_toml_report(data_df, os.path.join(args.output_path, f'{name}.toml'), encoding=args.encoding, show_correct=(not args.nosolutions), remove_start_len=args.remove_start_len, **update_defaults(args, default_toml_opts))
     elif args.transform == 'txt':
-        to_txt_exam(data_df, os.path.join(args.output_path, f'{name}.txt'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_text_opts))
+        to_txt_exam(data_df, os.path.join(args.output_path, f'{name}.txt'), encoding=args.encoding, show_correct=(not args.nosolutions), remove_start_len=args.remove_start_len, **update_defaults(args, default_text_opts))
     
     else:
         raise ValueError("You can't use that type of output transform, look at the docs for help.")
