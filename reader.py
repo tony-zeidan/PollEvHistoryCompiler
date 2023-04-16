@@ -145,9 +145,10 @@ def tex_helper(
     :param resp_block_type: The LaTeX block type to use for the question responses (wrapped block)
     :param resp_opt_block_type: The LaTeX block type to use for the question response option (if not correct)
     :param resp_opt_correct_block_type: The LaTeX block type to use for the question response option (if correct)
-    :param remove_start_len: How far into the string to look when removing the question prefix
+    :param show_correct: Whether or not to show the solutions in the output
     :param end_spacing: The amount of space to add after each response option
     :param end_spacing_metric: The metric for end_spacing
+    :param kwargs: Keyword arguments to pass into get_title_and_responses
 
     :return: The string representing the LaTeX block
     """
@@ -180,6 +181,7 @@ def to_tex_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None, s
     :param data_df: The dataframe
     :param output_file: The file to output to (.TeX)
     :param encoding: The encoding to use when outputting
+    :param show_correct: Whether or not to show the solutions in the output
     :param kwargs: keyword arguments for every tex block
     """
 
@@ -213,14 +215,8 @@ def text_helper(
     """
     Converts the current row into a LaTeX block question.
 
-
-    :param block_type: The LaTeX block type to use for the question title
-    :param resp_block_type: The LaTeX block type to use for the question responses (wrapped block)
-    :param resp_opt_block_type: The LaTeX block type to use for the question response option (if not correct)
-    :param resp_opt_correct_block_type: The LaTeX block type to use for the question response option (if correct)
-    :param remove_start_len: How far into the string to look when removing the question prefix
-    :param end_spacing: The amount of space to add after each response option
-    :param end_spacing_metric: The metric for end_spacing
+    :param row: The current dataframe row
+    :param show_correct: Whether or not to show the solutions in the output
 
     :return: The string representing the LaTeX block
     """
@@ -255,6 +251,7 @@ def to_txt_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None, s
     :param data_df: The dataframe
     :param output_file: The file to output to (.TeX)
     :param encoding: The encoding to use when outputting
+    :param show_correct: Whether or not to show the solutions in the output
     :param kwargs: keyword arguments for every tex block
     """
 
@@ -281,12 +278,10 @@ def html_helper(
     """
     Converts the current row into a HTML block.
 
-
-    :param block_type: The LaTeX block type to use for the question title
-    :param resp_block_type: The LaTeX block type to use for the question responses
-    :param remove_start_len: How far into the string to look when removing the question prefix
-    :param end_spacing: The amount of space to add after each response option
-    :param end_spacing_metric: The metric for end_spacing
+    :param correct_class: Classname (HTML) for the correct answers
+    :param incorrect_class: Classname (HTML) for incorrect answers
+    :param show_correct: Whether or not to show the solutions in the output
+    :param kwargs: Keyword arguments to pass into get_title_and_responses
 
     :return: The string representing the LaTeX block
     """
@@ -394,6 +389,10 @@ def to_yaml_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
     """
     Output to yaml format.
 
+    :param data_df: The PollEv results
+    :param output_file: Filepath to output to (.yaml or .yml must be used)
+    :param show_correct: Whether or not to show the solutions in the output
+    :param encoding: The encoding to write the file with
     """
 
     dct = to_dict_style(data_df, show_correct=show_correct)
@@ -405,6 +404,10 @@ def to_json_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
     """
     Output to JSON format.
 
+    :param data_df: The PollEv results
+    :param output_file: Filepath to output to (.json must be used)
+    :param show_correct: Whether or not to show the solutions in the output
+    :param encoding: The encoding to write the file with
     """
 
     dct = to_dict_style(data_df, show_correct=show_correct)
@@ -416,6 +419,10 @@ def to_toml_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
     """
     Output to TOML format.
 
+    :param data_df: The PollEv results
+    :param output_file: Filepath to output to (.toml must be used)
+    :param show_correct: Whether or not to show the solutions in the output
+    :param encoding: The encoding to write the file with
     """
 
     import toml
@@ -429,7 +436,9 @@ def to_csv_report(data_df: pd.DataFrame, output_file: str, encoding: str = None)
     """
     Output to CSV format.
 
-
+    :param data_df: The PollEv results
+    :param output_file: Filepath to output to (.csv must be used)
+    :param encoding: The encoding to write the file with
     """
 
     data_df.to_csv(output_file, encoding=encoding)
@@ -522,18 +531,11 @@ def main():
     config_parser = argparse.ArgumentParser(add_help=False)
     config_parser.add_argument('--config_path', type=str, help='Path to the configuration file (optional)', default=default_io_opts['config'])
     config_args, remaining_argv = config_parser.parse_known_args()
-    print("NO")
-
-
     default_io_opts['config'] = config_args.config_path
-    print(default_io_opts)
 
     try:
         config = configparser.ConfigParser()
         config.read(default_io_opts['config'])
-        print("CONFIG GOT")
-
-        print(config['pollev_output']['shuffle_options'])
 
         # i/o and general config
         default_io_opts.update(update_defaults_config(default_io_opts, config, 'pollev_output'))
@@ -617,23 +619,23 @@ def main():
 
     # check transform type
     if args.transform == 'tex':
-        to_tex_exam(data_df, os.path.join(args.output_path, f'{name}.tex'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_tex_opts))
+        to_tex_exam(data_df, os.path.join(args.output_path, f'{name}.tex'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_tex_opts))
     elif args.transform == 'yaml':
-        to_yaml_report(data_df, os.path.join(args.output_path, f'{name}.yaml'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_yaml_opts))
+        to_yaml_report(data_df, os.path.join(args.output_path, f'{name}.yaml'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_yaml_opts))
     elif args.transform == 'json':
-        to_json_report(data_df, os.path.join(args.output_path, f'{name}.json'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_json_opts))
+        to_json_report(data_df, os.path.join(args.output_path, f'{name}.json'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_json_opts))
     elif args.transform == 'csv':
-        to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_csv_opts))
+        to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_csv_opts))
     elif args.transform == 'html':
-        to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_html_opts))
+        to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_html_opts))
         try:
             shutil.copyfile('html-styles.css', os.path.join(args.output_path, f'html-styles.css'))
         except Exception:
             pass
     elif args.transform == 'toml':
-        to_toml_report(data_df, os.path.join(args.output_path, f'{name}.toml'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_toml_opts))
+        to_toml_report(data_df, os.path.join(args.output_path, f'{name}.toml'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_toml_opts))
     elif args.transform == 'txt':
-        to_txt_exam(data_df, os.path.join(args.output_path, f'{name}.txt'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_text_opts))
+        to_txt_exam(data_df, os.path.join(args.output_path, f'{name}.txt'), encoding=args.encoding, show_correct=not args.nosolutions, remove_start_len=args.remove_start_len, **update_defaults(args, default_text_opts))
     
     else:
         raise ValueError("You can't use that type of output transform, look at the docs for help.")
