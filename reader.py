@@ -350,7 +350,7 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, encoding: str = None
         raise ValueError("Column couldn't be found, can't continue.")
 
 
-def dict_helper(row, **kwargs):
+def dict_helper(row, show_correct: bool = True, **kwargs):
     """
     To Dict helper.
 
@@ -362,10 +362,13 @@ def dict_helper(row, **kwargs):
         'title': title,
         'responses': responses['responses'],
         'correct': responses['correct']
+    } if show_correct else {
+        'title': title,
+        'responses': responses['responses'],
     }
     
 
-def to_dict_style(data_df: pd.DataFrame):
+def to_dict_style(data_df: pd.DataFrame, show_correct: bool = True):
     """
     Converts the CSV dataframe into a YAML report.
 
@@ -378,8 +381,8 @@ def to_dict_style(data_df: pd.DataFrame):
     i = 1
 
     def help(row): 
-        nonlocal i
-        dct[str(i)] = dict_helper(row)
+        nonlocal i, dct, show_correct
+        dct[str(i)] = dict_helper(row, show_correct=show_correct)
         i += 1
 
     data_df.apply(lambda x: help(x), axis=1)
@@ -387,29 +390,29 @@ def to_dict_style(data_df: pd.DataFrame):
     return dct
 
 
-def to_yaml_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+def to_yaml_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, encoding: str = None):
     """
     Output to yaml format.
 
     """
 
-    dct = to_dict_style(data_df)
+    dct = to_dict_style(data_df, show_correct=show_correct)
 
     with open(output_file, 'w', encoding=encoding) as out_file:
         yaml.dump(dct, out_file)
 
-def to_json_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+def to_json_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, encoding: str = None):
     """
     Output to JSON format.
 
     """
 
-    dct = to_dict_style(data_df)
+    dct = to_dict_style(data_df, show_correct=show_correct)
 
     with open(output_file, 'w', encoding=encoding) as out_file:
         json.dump(dct, out_file)
 
-def to_toml_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+def to_toml_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, encoding: str = None):
     """
     Output to TOML format.
 
@@ -417,7 +420,7 @@ def to_toml_report(data_df: pd.DataFrame, output_file: str, encoding: str = None
 
     import toml
 
-    dct = to_dict_style(data_df)
+    dct = to_dict_style(data_df, show_correct=show_correct)
 
     with open(output_file, 'w', encoding=encoding) as out_file:
         toml.dump(dct, out_file)
@@ -565,7 +568,7 @@ def main():
     global_parser = argparse.ArgumentParser(description='Read CSV file with optional screen name filter', add_help=False)
     global_parser.add_argument('--config_path', type=str, help='Path to the configuration file (optional)', default=default_io_opts['config'])
     global_parser.add_argument('--rhidden', help='Remove questions with hidden titles', default=default_io_opts['rhidden'], action='store_true')
-    global_parser.add_argument('--nosolutions', help='Remove solutions', default=default_io_opts['show_solutions'], action='store_false')
+    global_parser.add_argument('--nosolutions', help='Remove solutions', default=not default_io_opts['show_solutions'], action='store_false')
     global_parser.add_argument('--presenter', type=str, help='Presenter name to filter (optional)', default=None)
     global_parser.add_argument('--output_path', type=str, help='Path for output file (optional)', default=default_io_opts['output_path'])
     global_parser.add_argument('--encoding', type=str, help='Encoding for reading and writing (optional)', default=default_io_opts['encoding'])
@@ -614,23 +617,23 @@ def main():
 
     # check transform type
     if args.transform == 'tex':
-        to_tex_exam(data_df, os.path.join(args.output_path, f'{name}.tex'), encoding=args.encoding, **update_defaults(args, default_tex_opts))
+        to_tex_exam(data_df, os.path.join(args.output_path, f'{name}.tex'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_tex_opts))
     elif args.transform == 'yaml':
-        to_yaml_report(data_df, os.path.join(args.output_path, f'{name}.yaml'), encoding=args.encoding, **update_defaults(args, default_yaml_opts))
+        to_yaml_report(data_df, os.path.join(args.output_path, f'{name}.yaml'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_yaml_opts))
     elif args.transform == 'json':
-        to_json_report(data_df, os.path.join(args.output_path, f'{name}.json'), encoding=args.encoding, **update_defaults(args, default_json_opts))
+        to_json_report(data_df, os.path.join(args.output_path, f'{name}.json'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_json_opts))
     elif args.transform == 'csv':
-        to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding, **update_defaults(args, default_csv_opts))
+        to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_csv_opts))
     elif args.transform == 'html':
-        to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding, **update_defaults(args, default_html_opts))
+        to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_html_opts))
         try:
             shutil.copyfile('html-styles.css', os.path.join(args.output_path, f'html-styles.css'))
         except Exception:
             pass
     elif args.transform == 'toml':
-        to_toml_report(data_df, os.path.join(args.output_path, f'{name}.toml'), encoding=args.encoding, **update_defaults(args, default_toml_opts))
+        to_toml_report(data_df, os.path.join(args.output_path, f'{name}.toml'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_toml_opts))
     elif args.transform == 'txt':
-        to_txt_exam(data_df, os.path.join(args.output_path, f'{name}.txt'), encoding=args.encoding, show_correct=args.nosolutions, **update_defaults(args, default_text_opts))
+        to_txt_exam(data_df, os.path.join(args.output_path, f'{name}.txt'), encoding=args.encoding, show_correct=not args.nosolutions, **update_defaults(args, default_text_opts))
     
     else:
         raise ValueError("You can't use that type of output transform, look at the docs for help.")
