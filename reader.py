@@ -6,18 +6,53 @@ import json
 import random
 import configparser
 import shutil
+from collections import OrderedDict
 
 TEX_CHARS_ESCAPE = ['%']
 QUESTION_START_CHARS = [')', '.', ']', '&']
+
+def remove_question_start(s: str, max_len: int):
+    """
+    Removes the start of a question. 
+
+    a) <- this form
+
+    :param s: The string to modify
+    :param max_len: How long a substring the function should look for the characters in
+
+    :return: Modified string
+    """
+    for x in QUESTION_START_CHARS:
+        try:
+            ind = s.index(x)
+            if ind <= max_len:
+                s = s[ind+1:]
+
+                # try to remove starting spaces
+                while s[0] == " ":
+                    s = s[1:]
+                break
+        except ValueError:
+            pass
+        except IndexError:
+            pass
+    return s
 
 def read_csv_file(
         file_path,
         presenter:str=None,
         rhidden: bool = False,
+        rimages: bool = False,
         presenter_col: str = 'Presenter',
         question_col: str = 'Activity title',
         activity_type_col: str = 'Activity type',
+        response_col: str = 'Response options',
         multiple_choice_type: str = 'Multiple choice',
+        remove_start_len: int = 4,
+        response_options_delim: str = " | ", 
+        image_in_str: str = '(an image)',
+        correct_in_response: str = '(Correct)',
+        shuffle: bool = True,
         **kwargs
     ):
     """
@@ -25,17 +60,48 @@ def read_csv_file(
 
     :param file_path: The CSV file path (to read)
     :param presenter: The presenter to filter by
+    :param rhidden: Whether or not to remove hidden question titles
     :param kwargs: Any keyword arguments for read_csv
 
     :return: The read data in a dataframe
     """
+
     data_df = pd.read_csv(file_path, **kwargs)
     if presenter is not None:
         data_df = data_df[data_df[presenter_col] == presenter]
 
     data_df = data_df[data_df[activity_type_col] == multiple_choice_type]
+
+    # remove the start of the question title
+    data_df[question_col] = data_df[question_col].apply(lambda x: remove_question_start(x, remove_start_len))
+
+    # remove hidden entries
     if rhidden:
         data_df = data_df[data_df[question_col] != "~hidden~"]
+
+    # remove image entries
+    if rimages:
+        data_df = ~(data_df[question_col].str.contains(image_in_str) | data_df[response_col].str.contains(image_in_str))
+
+
+    # split and maybe shuffle
+    if shuffle:
+        def split_shuffle(row):
+            lst = row.split(response_options_delim)
+            random.shuffle(lst)
+            return lst
+        data_df['split_responses'] = data_df[response_col].apply(split_shuffle)
+    else:
+        data_df['split_responses'] = data_df[response_col].apply(lambda x: x.split(response_options_delim))
+
+    # remove the question starts
+    data_df['split_responses'] = data_df['split_responses'].apply(lambda x: [remove_question_start(x_i, remove_start_len) for x_i in x])
+
+    # check for any correct responses
+    data_df['split_correct_responses'] = data_df['split_responses'].apply(lambda x: [x_i.replace(correct_in_response, "") for x_i in x if correct_in_response in x_i])
+
+    # remove the question starts
+    data_df['split_responses'] = data_df['split_responses'].apply(lambda x: [x_i.replace(correct_in_response, "") for x_i in x])    
 
     return data_df
 
@@ -54,88 +120,16 @@ def change_tex_chars(s: str) -> str:
     return s
 
 
-def remove_question_start(s: str, max_len: int):
-    """
-    Removes the start of a question. 
-
-    a) <- this form
-
-    :param s: The string to modify
-    :param max_len: How long a substring the function should look for the characters in
-
-    :return: Modified string
-    """
-    for x in QUESTION_START_CHARS:
-        try:
-            ind = s.index(x)
-            if ind <= max_len:
-                s = s[ind+1:]
-                break
-        except ValueError:
-            pass
-        except IndexError:
-            pass
-    return s
-
-def get_title_and_responses(
-        row,
-        title_col: str = 'Activity title',
-        remove_start_len: int = 4,
-        response_options_col:str = 'Response options',
-        response_options_delim: str = " | ", 
-        correct_in_response: str = '(Correct)',
-        shuffle: bool = True
-):
-    """
-    :param row: Current row of dataframe
-    :param title_col: The title with the question name
-    :param response_options_col: The column with response options
-    :param response_options_delim: The delimiter between response options
-    :param correct_in_response: The delimiter that signifies a response is correct
-    :param shuffle: Whether to shuffle the responses or not
-
-    :return: Mapping of responses and correct response, and title
-    """
-    responses = row[response_options_col].split(response_options_delim)  # split the responses
-    
-    resp_dct = {
-        'responses': [],
-        'correct': []
-    }
-    for resp in responses:
-        resp = remove_question_start(resp, remove_start_len)
-
-        # remove any spaces at the beginning
-        try:
-            while resp[0] == " ":
-                resp = resp[1:]
-        except IndexError:
-            pass
-
-        if correct_in_response in resp:
-            resp = resp.replace(correct_in_response, "")
-            resp_dct['correct'].append(resp)
-
-        resp_dct['responses'].append(resp)
-
-    if shuffle:
-        random.shuffle(resp_dct['responses'])
-    
-    title = row[title_col]
-    title = remove_question_start(title, remove_start_len)
-
-    return resp_dct, title
-
 def tex_helper(
         row,
+        title_col: str = 'Activity title',
         block_type: str = 'question',
         resp_block_type: str = 'oneparcheckboxes',
         resp_opt_block_type: str = 'choice',
         resp_opt_correct_block_type: str = 'CorrectChoice',
         show_correct: bool = True,
         end_spacing: int = 4,
-        end_spacing_metric: str = 'pt',
-        **kwargs
+        end_spacing_metric: str = 'pt'
     ) -> str:
     """
     Converts the current row into a LaTeX block question.
@@ -148,14 +142,13 @@ def tex_helper(
     :param show_correct: Whether or not to show the solutions in the output
     :param end_spacing: The amount of space to add after each response option
     :param end_spacing_metric: The metric for end_spacing
-    :param kwargs: Keyword arguments to pass into get_title_and_responses
 
     :return: The string representing the LaTeX block
     """
 
     strbuilder = []
 
-    responses, title = get_title_and_responses(row, **kwargs)
+    title = row[title_col]
     title = change_tex_chars(title)
 
     strbuilder.append(r'\begin{' + block_type + r'}')
@@ -163,9 +156,9 @@ def tex_helper(
     strbuilder.append(r'\end{' + block_type + r'}\\')
 
     strbuilder.append(r'\begin{' + resp_block_type + r'}')
-    for resp in responses['responses']:
+    for resp in row['split_responses']:
         resp_new = change_tex_chars(resp)
-        if resp in responses['correct'] and show_correct:
+        if resp in row['split_correct_responses'] and show_correct:
             strbuilder.append(rf"\{resp_opt_correct_block_type} {resp_new}\\[{end_spacing}{end_spacing_metric}]")
         else:
             strbuilder.append(rf"\{resp_opt_block_type} {resp_new}\\[{end_spacing}{end_spacing_metric}]")
@@ -209,6 +202,7 @@ def to_tex_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None, s
     
 def text_helper(
         row,
+        title_col: str = 'Activity title',
         show_correct: bool = True,
         **kwargs
     ) -> str:
@@ -223,12 +217,12 @@ def text_helper(
 
     strbuilder = []
 
-    responses, title = get_title_and_responses(row, **kwargs)
+    title = row[title_col]
     title = change_tex_chars(title)
 
     strbuilder.append(f"Question:\n{title}\n\nOptions:\n")
     
-    for resp in responses['responses']:
+    for resp in row['split_responses']:
         resp_new = resp
         strbuilder.append(f"\t- {resp_new}")
 
@@ -236,7 +230,7 @@ def text_helper(
     if show_correct:
         strbuilder.append("Correct:\n")
 
-        for resp in responses['correct']:
+        for resp in row['split_correct_responses']:
             strbuilder.append(f"\t- {resp}")
 
     strbuilder.append("\n\n")
@@ -270,6 +264,7 @@ def to_txt_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None, s
 
 def html_helper(
         row,
+        title_col: str = 'Activity title',
         correct_class: str = 'correct',
         incorrect_class: str = 'incorrect',
         show_correct: bool = True,
@@ -288,15 +283,15 @@ def html_helper(
 
     strbuilder = []
 
-    responses, title = get_title_and_responses(row, **kwargs)
+    title = row[title_col]
     title = change_tex_chars(title)
 
     strbuilder.append(rf'<li>{title}</li>')
 
     strbuilder.append('\t<ol type="a">')
-    for resp in responses['responses']:
+    for resp in row['split_responses']:
         resp_new = resp
-        if resp in responses['correct']:
+        if resp in row['split_correct_responses']:
             if show_correct:
                 strbuilder.append(f"\t\t<li class={correct_class}>{resp_new}</li>")
             else:
@@ -345,31 +340,28 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, encoding: str = None
         raise ValueError("Column couldn't be found, can't continue.")
 
 
-def dict_helper(row, show_correct: bool = True, **kwargs):
+def dict_helper(row, show_correct: bool = True, question_col: str = 'Activity title'):
     """
     To Dict helper.
 
     """
 
-    responses, title = get_title_and_responses(row, **kwargs)
-
     return {
-        'title': title,
-        'responses': responses['responses'],
-        'correct': responses['correct']
+        'title': row[question_col],
+        'responses': row['split_responses'],
+        'correct': row['split_correct_responses']
     } if show_correct else {
-        'title': title,
-        'responses': responses['responses'],
+        'title': row[question_col],
+        'responses': row['split_responses']
     }
     
 
-def to_dict_style(data_df: pd.DataFrame, show_correct: bool = True):
+def to_dict_style(data_df: pd.DataFrame, show_correct: bool = True, root_name: str = None):
     """
-    Converts the CSV dataframe into a YAML report.
+    Converts the CSV dataframe into a DICT report.
 
     :param data_df: The dataframe
-    :param output_file: The file to output to (.yaml)
-    :param encoding: The encoding to use when outputting
+    :param show_correct: Whether or not to show the correct answer
     """
 
     dct = {}
@@ -377,62 +369,72 @@ def to_dict_style(data_df: pd.DataFrame, show_correct: bool = True):
 
     def help(row): 
         nonlocal i, dct, show_correct
-        dct[str(i)] = dict_helper(row, show_correct=show_correct)
+        dct[f'{i}'] = dict_helper(row, show_correct=show_correct)
         i += 1
 
     data_df.apply(lambda x: help(x), axis=1)
+    
+    if root_name is not None:
+        new_dct = {
+            root_name: dct
+        }
+    else:
+        new_dct = dct
 
-    return dct
+    return new_dct
 
 
-def to_yaml_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, encoding: str = None):
+def to_yaml_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, root_name: str = 'questions', encoding: str = None):
     """
     Output to yaml format.
 
     :param data_df: The PollEv results
     :param output_file: Filepath to output to (.yaml or .yml must be used)
     :param show_correct: Whether or not to show the solutions in the output
+    :param root_name: The key for the root of the tree
     :param encoding: The encoding to write the file with
     """
 
-    dct = to_dict_style(data_df, show_correct=show_correct)
+    dct = to_dict_style(data_df, show_correct=show_correct, root_name=root_name)
 
     with open(output_file, 'w', encoding=encoding) as out_file:
-        yaml.dump(dct, out_file)
+        yaml.dump(dct, out_file,default_flow_style=False)
 
-def to_json_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, encoding: str = None):
+def to_json_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, root_name: str = 'questions', encoding: str = None):
     """
     Output to JSON format.
 
     :param data_df: The PollEv results
     :param output_file: Filepath to output to (.json must be used)
     :param show_correct: Whether or not to show the solutions in the output
+    :param root_name: The key for the root of the tree
     :param encoding: The encoding to write the file with
     """
 
-    dct = to_dict_style(data_df, show_correct=show_correct)
+    dct = to_dict_style(data_df, show_correct=show_correct, root_name=root_name)
 
     with open(output_file, 'w', encoding=encoding) as out_file:
         json.dump(dct, out_file)
 
-def to_toml_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, encoding: str = None):
+def to_toml_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, question_prefix: str = 'question', encoding: str = None):
     """
     Output to TOML format.
 
     :param data_df: The PollEv results
     :param output_file: Filepath to output to (.toml must be used)
     :param show_correct: Whether or not to show the solutions in the output
+    :param question_prefix: The key used in each question
     :param encoding: The encoding to write the file with
     """
 
     import toml
 
-    dct = to_dict_style(data_df, show_correct=show_correct)
+    dct = to_dict_style(data_df, show_correct=show_correct, root_name = question_prefix)
 
     with open(output_file, 'w', encoding=encoding) as out_file:
         toml.dump(dct, out_file)
 
-def to_csv_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+def to_csv_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, encoding: str = None):
     """
     Output to CSV format.
 
@@ -440,8 +442,8 @@ def to_csv_report(data_df: pd.DataFrame, output_file: str, encoding: str = None)
     :param output_file: Filepath to output to (.csv must be used)
     :param encoding: The encoding to write the file with
     """
-
-    data_df.to_csv(output_file, encoding=encoding)
+    
+    data_df.drop(columns=['split_responses', 'split_correct_responses'], errors='ignore').to_csv(output_file, encoding=encoding, index=False)
 
 def update_defaults(args, defaults: dict) -> dict:
     """
@@ -487,8 +489,9 @@ def main():
         encoding = 'utf-8',
         transform = 'csv',
         remove_start_len = 5,
-        shuffle_options = True,
-        rhidden = False,
+        shuffle_responses = True,
+        remove_hidden = False,
+        remove_images = False,
         show_solutions = True,
         config = 'config.ini'
     )
@@ -507,15 +510,15 @@ def main():
     )
 
     default_json_opts = dict(
-        
+        root_name = 'questions'
     )
 
     default_yaml_opts = dict(
-        
+        root_name = 'questions'
     )
 
     default_toml_opts = dict(
-        
+        question_prefix = 'question'
     )
 
     default_csv_opts = dict(
@@ -569,12 +572,13 @@ def main():
 
     global_parser = argparse.ArgumentParser(description='Read CSV file with optional screen name filter', add_help=False)
     global_parser.add_argument('--config_path', type=str, help='Path to the configuration file (optional)', default=default_io_opts['config'])
-    global_parser.add_argument('--rhidden', help='Remove questions with hidden titles', default=default_io_opts['rhidden'], action='store_true')
-    global_parser.add_argument('--nosolutions', help='Remove solutions', default=not default_io_opts['show_solutions'], action='store_true')
+    global_parser.add_argument('--remove_hidden', help='Remove questions with hidden titles', default=default_io_opts['remove_hidden'], action='store_true')
+    global_parser.add_argument('--remove_images', help='Remove questions with images in responses or question title', default=default_io_opts['remove_images'], action='store_true')
+    global_parser.add_argument('--nosolutions', help='Remove solutions', default=(not default_io_opts['show_solutions']), action='store_true')
     global_parser.add_argument('--presenter', type=str, help='Presenter name to filter (optional)', default=None)
     global_parser.add_argument('--output_path', type=str, help='Path for output file (optional)', default=default_io_opts['output_path'])
     global_parser.add_argument('--encoding', type=str, help='Encoding for reading and writing (optional)', default=default_io_opts['encoding'])
-    global_parser.add_argument('--shuffle_options', help='Whether to shuffle the response options of questions (optional)', default=default_io_opts['shuffle_options'], action='store_true')
+    global_parser.add_argument('--noshuffle', help="Don't shuffle the response options (optional)", default=(not default_io_opts['shuffle_responses']), action='store_true')
     global_parser.add_argument('--remove_start_len', type=int, help='How far into the string to look when removing the question or response prefix (optional)', default=default_io_opts['remove_start_len'])
 
     # parser for the required file path
@@ -598,22 +602,26 @@ def main():
 
     # YAML transform
     parser_yaml = transform_parser.add_parser('yaml', help='Convert to YAML', parents=[global_parser], add_help=True)
+    parser_yaml.add_argument('--root_name', type=str, help='Root name of YAML', default=default_yaml_opts['root_name'])
 
     # JSON transform
     parser_json = transform_parser.add_parser('json', help='Convert to JSON', parents=[global_parser], add_help=True)
+    parser_json.add_argument('--root_name', type=str, help='Root name of JSON', default=default_json_opts['root_name'])
 
     # CSV transform
     parser_csv = transform_parser.add_parser('csv', help='Convert to CSV', parents=[global_parser], add_help=True)
 
     # TOML transform
     parser_toml = transform_parser.add_parser('toml', help='Convert to TOML', parents=[global_parser], add_help=True)
+    parser_toml.add_argument('--question_prefix', type=str, help='Prefix to use in TOML output (<prefix>.<question num>)', default=default_toml_opts['question_prefix'])
 
     # TXT transform
     parser_text = transform_parser.add_parser('txt', help='Convert to TXT', parents=[global_parser], add_help=True)
 
     parser.set_defaults(transform=default_io_opts['transform'])
     args = parser.parse_args(remaining_argv)
-    data_df = read_csv_file(args.file_path, presenter=args.presenter, encoding=args.encoding, rhidden=args.rhidden)
+
+    data_df = read_csv_file(args.file_path, presenter=args.presenter, encoding=args.encoding, rhidden=args.remove_hidden, rimages=args.remove_images, shuffle=(not args.noshuffle), remove_start_len=args.remove_start_len)
 
     name, _ = os.path.splitext(args.file_path)
 
@@ -621,23 +629,25 @@ def main():
 
     # check transform type
     if args.transform == 'tex':
-        to_tex_exam(data_df, os.path.join(args.output_path, f'{name}.tex'), encoding=args.encoding, show_correct=show_correct, remove_start_len=args.remove_start_len, **update_defaults(args, default_tex_opts))
+        to_tex_exam(data_df, os.path.join(args.output_path, f'{name}.tex'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_tex_opts))
     elif args.transform == 'yaml':
-        to_yaml_report(data_df, os.path.join(args.output_path, f'{name}.yaml'), encoding=args.encoding, show_correct=show_correct, remove_start_len=args.remove_start_len, **update_defaults(args, default_yaml_opts))
+        to_yaml_report(data_df, os.path.join(args.output_path, f'{name}.yaml'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_yaml_opts))
     elif args.transform == 'json':
-        to_json_report(data_df, os.path.join(args.output_path, f'{name}.json'), encoding=args.encoding, show_correct=show_correct, remove_start_len=args.remove_start_len, **update_defaults(args, default_json_opts))
+        to_json_report(data_df, os.path.join(args.output_path, f'{name}.json'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_json_opts))
     elif args.transform == 'csv':
-        to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding, show_correct=show_correct, remove_start_len=args.remove_start_len, **update_defaults(args, default_csv_opts))
+        to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_csv_opts))
     elif args.transform == 'html':
-        to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding, show_correct=show_correct, remove_start_len=args.remove_start_len, **update_defaults(args, default_html_opts))
+        to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_html_opts))
+        
+        # copy over the CSS file
         try:
             shutil.copyfile('html-styles.css', os.path.join(args.output_path, f'html-styles.css'))
         except Exception:
             pass
     elif args.transform == 'toml':
-        to_toml_report(data_df, os.path.join(args.output_path, f'{name}.toml'), encoding=args.encoding, show_correct=(not args.nosolutions), remove_start_len=args.remove_start_len, **update_defaults(args, default_toml_opts))
+        to_toml_report(data_df, os.path.join(args.output_path, f'{name}.toml'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_toml_opts))
     elif args.transform == 'txt':
-        to_txt_exam(data_df, os.path.join(args.output_path, f'{name}.txt'), encoding=args.encoding, show_correct=(not args.nosolutions), remove_start_len=args.remove_start_len, **update_defaults(args, default_text_opts))
+        to_txt_exam(data_df, os.path.join(args.output_path, f'{name}.txt'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_text_opts))
     
     else:
         raise ValueError("You can't use that type of output transform, look at the docs for help.")
