@@ -1,5 +1,8 @@
 # PollEvHistoryCompiler
-A compiler of Poll Everywhere history results.
+Have you ever wanted to compile your Poll Everywhere history into a more usable form?
+This project allows you to use a script to load it into almost any form you want!
+You can filter by presenter, and use different types of encodings so that you can load polls with almost any data in them.
+Right now most of the support is for `Multiple choice` type polls.
 
 ## Usage
 It works as follows as a command-line script.
