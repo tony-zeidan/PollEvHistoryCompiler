@@ -4,6 +4,10 @@ import pandas as pd
 import yaml
 import json
 import random
+import configparser
+
+
+
 
 TEX_CHARS_ESCAPE = ['%']
 QUESTION_START_CHARS = [')', '.', ']', '&']
@@ -21,6 +25,8 @@ def read_csv_file(file_path, presenter:str=None, **kwargs):
     data_df = pd.read_csv(file_path, **kwargs)
     if presenter is not None:
         data_df = data_df[data_df["Presenter"] == presenter]
+
+    data_df = data_df[data_df["Activity type"] == "Multiple choice"]
 
     return data_df
 
@@ -115,10 +121,10 @@ def tex_helper(
         row,
         block_type: str = 'question',
         resp_block_type: str = 'oneparcheckboxes',
-        
+        resp_opt_block_type: str = 'choice',
+        resp_opt_correct_block_type: str = 'CorrectChoice',
         end_spacing: int = 4,
         end_spacing_metric: str = 'pt',
-        
         **kwargs
     ) -> str:
     """
@@ -126,7 +132,9 @@ def tex_helper(
 
 
     :param block_type: The LaTeX block type to use for the question title
-    :param resp_block_type: The LaTeX block type to use for the question responses
+    :param resp_block_type: The LaTeX block type to use for the question responses (wrapped block)
+    :param resp_opt_block_type: The LaTeX block type to use for the question response option (if not correct)
+    :param resp_opt_correct_block_type: The LaTeX block type to use for the question response option (if correct)
     :param remove_start_len: How far into the string to look when removing the question prefix
     :param end_spacing: The amount of space to add after each response option
     :param end_spacing_metric: The metric for end_spacing
@@ -147,26 +155,27 @@ def tex_helper(
     for resp in responses['responses']:
         resp_new = change_tex_chars(resp)
         if resp in responses['correct']:
-            strbuilder.append(rf"\CorrectChoice {resp_new}\\[{end_spacing}{end_spacing_metric}]")
+            strbuilder.append(rf"\{resp_opt_correct_block_type} {resp_new}\\[{end_spacing}{end_spacing_metric}]")
         else:
-            strbuilder.append(rf"\choice {resp_new}\\[{end_spacing}{end_spacing_metric}]")
+            strbuilder.append(rf"\{resp_opt_block_type} {resp_new}\\[{end_spacing}{end_spacing_metric}]")
 
     strbuilder.append(r'\end{' + resp_block_type + r'}' + "\n")
 
     return "\n".join(strbuilder)
 
-def to_tex_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+def to_tex_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None, **kwargs):
     """
     Converts the CSV dataframe into a LaTeX exam report.
 
     :param data_df: The dataframe
     :param output_file: The file to output to (.TeX)
     :param encoding: The encoding to use when outputting
+    :param kwargs: keyword arguments for every tex block
     """
 
     try: 
 
-        data_df['strquestion'] = data_df.apply(lambda x: tex_helper(x), axis=1)
+        data_df['strquestion'] = data_df.apply(lambda x: tex_helper(x, **kwargs), axis=1)
 
         with open(output_file, 'w', encoding=encoding) as out_file:
             
@@ -305,64 +314,196 @@ def to_json_report(data_df: pd.DataFrame, output_file: str, encoding: str = None
     with open(output_file, 'w', encoding=encoding) as out_file:
         json.dump(dct, out_file)
 
+def to_toml_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+    import toml
+
+    dct = to_dict_style(data_df)
+
+    with open(output_file, 'w', encoding=encoding) as out_file:
+        toml.dump(dct, out_file)
+
 def to_csv_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
 
     data_df.to_csv(output_file, encoding=encoding)
+
+def update_defaults(args, defaults: dict) -> dict:
+    """
+    Makes a new dict based on the intersection of the args and defaults.
+
+    :param args: Newly input args (Namespace)
+    :param defaults: Dict containing default values
+    :return: new defaults
+    """
+
+    kw = {}
+
+    args_dct = vars(args)
+    for k in defaults.keys():
+        if k in args_dct:
+            kw[k] = args_dct[k] or defaults[k]
+    return kw
+
+def update_defaults_config(defaults, config, section) -> dict:
+    """
+    Makes a new dict based on the intersection of the args and defaults.
+
+    :param args: Newly input args (Namespace)
+    :param defaults: Dict containing default values
+    :return: new defaults
+    """
+
+    kw = {}
+
+    for k in defaults.keys():
+        kw[k] = config.get(section, k, fallback=defaults[k])
+    return kw
 
 def main():
     """
     Main script executable.
     """
-    parser = argparse.ArgumentParser(description='Read CSV file with optional screen name filter')
-    parser.add_argument('file_path', type=str, help='Path to the CSV file')
-    parser.add_argument('--presenter', type=str, help='Presenter name to filter (optional)', default=None)
-    parser.add_argument('--output_path', type=str, help='Path for output file (optional)', default=os.getcwd())
-    parser.add_argument('--transform', type=str, help='Transform to apply (optional)', default='yaml')
-    parser.add_argument('--encoding', type=str, help='Encoding for reading and writing (optional)', default='utf-8')
+
+    # define default values
+    default_io_opts = dict(
+        output_path = os.getcwd(),
+        encoding = 'utf-8',
+        transform = 'csv',
+        remove_start_len = 5,
+        shuffle_options = True,
+        config = 'config.ini'
+    )
+
+    default_tex_opts = dict(
+        block_type = 'question',
+        resp_block_type = 'openparboxes',
+        resp_opt_block_type = 'choice',
+        resp_opt_correct_block_type = 'CorrectChoice',
+        end_spacing = 4,
+        end_spacing_metric = 'pt'
+    )
+
+    default_html_opts = dict(
+
+    )
+
+    default_json_opts = dict(
+        
+    )
+
+    default_yaml_opts = dict(
+        
+    )
+
+    default_toml_opts = dict(
+        
+    )
+
+    default_csv_opts = dict(
+        
+    )
+
+
+    config_parser = argparse.ArgumentParser(add_help=False)
+    config_parser.add_argument('--config_path', type=str, help='Path to the configuration file (optional)', default=None)
+    config_args, remaining_argv = config_parser.parse_known_args()
+
     
+    # allow the user to override defaults using the config path
+    if config_args.config_path:
+
+        default_io_opts['config'] = config_args.config_path
+
+        try:
+            config = configparser.ConfigParser()
+            config.read(default_io_opts['config'])
+
+            print(config['pollev_output']['shuffle_options'])
+
+            # i/o and general config
+            default_io_opts.update(update_defaults_config(default_io_opts, config, 'pollev_output'))
+
+            # tex defaults options
+            if default_io_opts['transform'] == 'tex' and 'pollev_transforms.tex' in config:
+                default_tex_opts.update(update_defaults_config(default_tex_opts, config, 'pollev_transforms.tex'))
+
+            elif default_io_opts['transform'] == 'html' and 'pollev_transforms.html' in config:
+                default_html_opts.update(update_defaults_config(default_html_opts, config, 'pollev_transforms.html'))
+
+            elif default_io_opts['transform'] == 'yaml' and 'pollev_transforms.yaml' in config:
+                default_yaml_opts.update(update_defaults_config(default_yaml_opts, config, 'pollev_transforms.yaml'))
+
+            elif default_io_opts['transform'] == 'json' and 'pollev_transforms.json' in config:
+                default_json_opts.update(update_defaults_config(default_json_opts, config, 'pollev_transforms.json'))
+
+            elif default_io_opts['transform'] == 'csv' and 'pollev_transforms.csv' in config:
+                default_csv_opts.update(update_defaults_config(default_csv_opts, config, 'pollev_transforms.csv'))
+
+            elif default_io_opts['transform'] == 'toml' and 'pollev_transforms.toml' in config:
+                default_toml_opts.update(update_defaults_config(default_csv_opts, config, 'pollev_transforms.toml'))
+        
+        except FileNotFoundError:
+            parser.set_defaults(transform=default_io_opts['transform'])
+            args, _ = parser.parse_known_args(remaining_argv)
+            pass
+
+    global_parser = argparse.ArgumentParser(description='Read CSV file with optional screen name filter', add_help=False)
+    global_parser.add_argument('--config_path', type=str, help='Path to the configuration file (optional)', default=default_io_opts['config'])
+    global_parser.add_argument('--presenter', type=str, help='Presenter name to filter (optional)', default=None)
+    global_parser.add_argument('--output_path', type=str, help='Path for output file (optional)', default=default_io_opts['output_path'])
+    global_parser.add_argument('--encoding', type=str, help='Encoding for reading and writing (optional)', default=default_io_opts['encoding'])
+    global_parser.add_argument('--shuffle_options', type=bool, help='Whether to shuffle the response options of questions', default=default_io_opts['shuffle_options'])
+    global_parser.add_argument('--remove_start_len', type=int, help='How far into the string to look when removing the question or response prefix', default=default_io_opts['remove_start_len'])
+
+    # parser for the required file path
+    parser = argparse.ArgumentParser(description='Read CSV file with optional screen name filter', parents=[global_parser])
+    parser.add_argument('file_path', type=str, help='Path to the CSV file')
+
     # subparser for individual commands
-    transform_parser = parser.add_subparsers(dest='transform')
+    transform_parser = parser.add_subparsers(dest='transform', required=False)
 
     # LaTeX transform
-    parser_tex = transform_parser.add_parser('tex', help='Convert to LaTeX')
-    parser_tex.add_argument('--block_type', type=str, help='LaTeX block type to use for question title', default='question')
-    parser_tex.add_argument('--resp_block_type', type=str, help='LaTeX block type to use for question responses', default='oneparcheckboxes')
-    parser_tex.add_argument('--remove_start_len', type=int, help='How far into the string to look when removing the question prefix', default=4)
-    parser_tex.add_argument('--end_spacing', type=int, help='The amount of space to add after each response option', default=4)
-    parser_tex.add_argument('--end_spacing_metric', type=str, help='The metric for end_spacing', default='pt')
+    parser_tex = transform_parser.add_parser('tex', help='Convert to LaTeX', parents=[global_parser], add_help=True)
+    parser_tex.add_argument('--block_type', type=str, help='LaTeX block type to use for question title', default=default_tex_opts['block_type'])
+    parser_tex.add_argument('--resp_block_type', type=str, help='LaTeX block type to use for question responses', default=default_tex_opts['resp_block_type'])
+    parser_tex.add_argument('--resp_opt_block_type', type=str, help='LaTeX block used for a single response (if not correct)', default=default_tex_opts['resp_opt_block_type'])
+    parser_tex.add_argument('--resp_opt_correct_block_type', type=str, help='LaTeX block used for a single response (if correct)', default=default_tex_opts['resp_opt_correct_block_type'])
+    parser_tex.add_argument('--end_spacing', type=int, help='The amount of space to add after each response option', default=default_tex_opts['end_spacing'])
+    parser_tex.add_argument('--end_spacing_metric', type=str, help='The metric for end_spacing', default=default_tex_opts['end_spacing_metric'])
     
     # HTML transform
-    parser_html = transform_parser.add_parser('html', help='Convert to HTML')
+    parser_html = transform_parser.add_parser('html', help='Convert to HTML', parents=[global_parser], add_help=True)
 
     # YAML transform
-    parser_yaml = transform_parser.add_parser('yaml', help='Convert to YAML')
+    parser_yaml = transform_parser.add_parser('yaml', help='Convert to YAML', parents=[global_parser], add_help=True)
 
     # JSON transform
-    parser_json = transform_parser.add_parser('json', help='Convert to JSON')
+    parser_json = transform_parser.add_parser('json', help='Convert to JSON', parents=[global_parser], add_help=True)
 
     # CSV transform
-    parser_csv = transform_parser.add_parser('csv', help='Convert to CSV')
+    parser_csv = transform_parser.add_parser('csv', help='Convert to CSV', parents=[global_parser], add_help=True)
 
     # TOML transform
-    parser_csv = transform_parser.add_parser('toml', help='Convert to TOML')
+    parser_toml = transform_parser.add_parser('toml', help='Convert to TOML', parents=[global_parser], add_help=True)
 
-    args = parser.parse_args()
-    
+    parser.set_defaults(transform=default_io_opts['transform'])
+    args = parser.parse_args(remaining_argv)
     data_df = read_csv_file(args.file_path, presenter=args.presenter, encoding=args.encoding)
 
     name, _ = os.path.splitext(args.file_path)
 
     # check transform type
     if args.transform == 'tex':
-        to_tex_exam(data_df, os.path.join(args.output_path, f'{name}.tex'), encoding=args.encoding)
+        to_tex_exam(data_df, os.path.join(args.output_path, f'{name}.tex'), encoding=args.encoding, **update_defaults(args, default_tex_opts))
     elif args.transform == 'yaml':
-        to_yaml_report(data_df, os.path.join(args.output_path, f'{name}.yaml'), encoding=args.encoding)
+        to_yaml_report(data_df, os.path.join(args.output_path, f'{name}.yaml'), encoding=args.encoding, **update_defaults(args, default_yaml_opts))
     elif args.transform == 'json':
-        to_json_report(data_df, os.path.join(args.output_path, f'{name}.json'), encoding=args.encoding)
+        to_json_report(data_df, os.path.join(args.output_path, f'{name}.json'), encoding=args.encoding, **update_defaults(args, default_json_opts))
     elif args.transform == 'csv':
-        to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding)
+        to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding, **update_defaults(args, default_csv_opts))
     elif args.transform == 'html':
-        to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding)
+        to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding, **update_defaults(args, default_html_opts))
+    elif args.transform == 'toml':
+        to_toml_report(data_df, os.path.join(args.output_path, f'{name}.toml'), encoding=args.encoding, **update_defaults(args, default_toml_opts))
     else:
         raise ValueError("You can't use that type of output transform, look at the docs for help.")
 
