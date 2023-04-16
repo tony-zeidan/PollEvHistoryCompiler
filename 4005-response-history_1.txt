@@ -1,0 +1,661 @@
+Question:
+What is the relationship between directed and undirected models?
+
+Options:
+
+	- Undirected is a subset of directed.
+	- They are completely different.
+	- Directed is a subset of undirected. 
+
+
+
+
+
+Question:
+Why is it necessary to use Gibbs sampling?
+
+Options:
+
+	- All of the above. 
+	- Joint distribution is too complex to sample.
+	- Marginal distributions are difficult to calculate.
+	- Most conditional distributions are difficult to calculate.
+
+
+
+
+
+Question:
+What are the advantages of directed models?
+
+Options:
+
+	- A and C
+	- They are bidirectional.
+	- They do not have explaining away effect.
+	- They are easier to sample. 
+
+
+
+
+
+Question:
+What is the purpose of dividing a Markov network into cliques?
+
+Options:
+
+	- To find some patterns in a Markov network.
+	- To make it easier to draw a graph.
+	- To define a distribution that can be factorized. 
+
+
+
+
+
+Question:
+Why do we need structured probabilistic models?
+
+Options:
+
+	- None of the above.
+	- Generic probabilistic distributions are too complex. 
+	- Structured probabilistic models are more accurate.
+
+
+
+
+
+Question:
+What is the distribution of the time a continuous-time Markov chain spends in a state?
+
+Options:
+
+	- It is exponential. 
+	- It is Gaussian.
+	- It is uniform.
+
+
+
+
+
+Question:
+What are the main characteristics of Markov chains?
+
+Options:
+
+	- The next state only depends on the current state.
+	- All of the above. 
+	- They have limiting probabilities that are independent from initial conditions.
+	- They can be fully characterized by the state transition probabilities.
+
+
+
+
+
+Question:
+What is a state in a Markov chain?
+
+Options:
+
+	- The probability distribution of a RV
+	- The value a RV may take at a specific time. 
+	- The value that has maximum probability to happen.
+
+
+
+
+
+Question:
+What is a stochastic processs?
+
+Options:
+
+	- A procedure that may be out of order.
+	- A group of random variables indexed in time. 
+	- A random variable with continuous values.
+
+
+
+
+
+Question:
+What does synchronization mean?
+
+Options:
+
+	- Use nonoverlapping segments of the same randon number stream.
+	- Use the same randum number for the same  activity. 
+	- Use the same seed.
+
+
+
+
+
+Question:
+Is there any gain if the two systems have about the same variance?
+
+Options:
+
+	- No, because the two systems are independent.
+	- Yes, because sample points can be pooled together to estimate the variance. 
+
+
+
+
+
+Question:
+What is the main challenge for comparing two system designs?
+
+Options:
+
+	- Estimating the mean of each system.
+	- Estimating the variance of the difference between the means of the two systems. 
+	- Estimating the difference between the means of the two systems.
+
+
+
+
+
+Question:
+Does increasing run length have the same gain as increasing replications?
+
+Options:
+
+	- No, because it is correlated.
+	- Yes, because the gains are roughly the same. 
+
+
+
+
+
+Question:
+What happens when fewer data are deleted?
+
+Options:
+
+	- Bias is reduced.
+	- Variance is reduced. 
+	- Both of the above.
+
+
+
+
+
+Question:
+What is true for the variance estimator of the mean value when sample values are positive correlated?
+
+Options:
+
+	- It is biased low. 
+	- It is based high.
+	- It is unbiased.
+
+
+
+
+
+Question:
+What is the best way to remove initialization bias?
+
+Options:
+
+	- Use ensemble average to identify and remove initialization phase 
+	- Use cumulative average to identify and remove initialization stage
+	- Use measured data from time 0
+
+
+
+
+
+Question:
+What is the challenge for identifying initialization phase?
+
+Options:
+
+	- The initialization phase may be too long.
+	- The output is noisy. 
+	- There may be no bias at all.
+
+
+
+
+
+Question:
+How is CI different from PI?
+
+Options:
+
+	- CI can be made arbitrarily small while PI can't.
+	- PI can be made arbitrarily small while CI can't.
+	- They are for different purposes.
+	- A and B 
+	- A and C
+
+
+
+
+
+Question:
+What is the purpose of a point estimator?
+
+Options:
+
+	- For deciding which family of distributions to use.
+	- For estimating a CI
+	- For estimating a parameter of a distribution. 
+
+
+
+
+
+Question:
+How is the objective of terminating simulation different from non-terminating simulation?
+
+Options:
+
+	- They are the same.
+	- Terminating simulation is interested in transient state while non-terminating is in steady state. 
+	- Terminating simulation is interested in steady state while non-terminating simulation is in transient state.
+
+
+
+
+
+Question:
+Why is it possible to control type II error?
+
+Options:
+
+	- Because variance of sample average depends on number of examples. 
+	- Because it is always larger than type I error.
+	- Because it is always smaller than type I error.
+
+
+
+
+
+Question:
+What is type II error?
+
+Options:
+
+	- False positive.
+	- False negative. 
+	- False postive plus false nagtive.
+
+
+
+
+
+Question:
+What are the challenges for validating a model?
+
+Options:
+
+	- Hard to collect simulation results.
+	- Hard to decide face validity.
+	- Outputs are random. 
+
+
+
+
+
+Question:
+What are the conditions for Little's law to hold?
+
+Options:
+
+	- Arrivals must follow Poisson process.
+	- Those entered must exit the system. 
+	- It must be a single server queue.
+
+
+
+
+
+Question:
+Why is it difficult to debug simulation code?
+
+Options:
+
+	- Because code is hard to understand.
+	- Because input and output are random. 
+	- Because code may be written in different languages.
+
+
+
+
+
+Question:
+Why is it difficult to sample an arbitrary RV with a large number of dimensions?
+
+Options:
+
+	- Because it is difficult to factorize its distribution function.
+	- Because it is difficult to get a closed-form  cdf.
+	- All of the above. 
+	- Because it is difficult to use tabular approach.
+
+
+
+
+
+Question:
+What is the basic idea behind ART?
+
+Options:
+
+	- Randomly accept some values.
+	- Use a r.v. that is easy to generate as a reference. 
+	- Randomly reject some values.
+
+
+
+
+
+Question:
+Under what conditions, it may not be a good idea to generate r.v. with inverse-transform technique?
+
+Options:
+
+	- If its pdf is known.
+	- If it is a continuous r.v.
+	- All of the above. 
+	- If its cdf is hard to get.
+
+
+
+
+
+Question:
+To generate a random variate, why do we need to generate a random number first?
+
+Options:
+
+	- All random variables are related to uniform RVs.
+	- All of the above. 
+	- Random numbers are easier to generate.
+
+
+
+
+
+Question:
+Why is fishing a bad idea?
+
+Options:
+
+	- Because it increases the probability of false alarm. 
+	- Because it takes more time to process.
+	- Because it is less likely to detect a bad generator.
+
+
+
+
+
+Question:
+If you don't know which algorithm is being used in a generator, how should you choose the seed?
+
+Options:
+
+	- Any integer
+	- Any real value
+	- Any integer but zero 
+
+
+
+
+
+Question:
+Why does LCM generate numbers with cycles?
+
+Options:
+
+	- All of above 
+	- Because it generates integers within a range.
+	- Because it generates numbers with recursive formula.
+
+
+
+
+
+Question:
+What does it mean a sequence of numbers imitate random numbers?
+
+Options:
+
+	- All of above
+	- A and B 
+	- The numbers are independent.
+	- The numbers are not replicable
+	- The numbers distribute uniformly.
+
+
+
+
+
+Question:
+Why does small p-value mean poor model?
+
+Options:
+
+	- Because it means the probability of wrong rejection is high.
+	- Because it means the model is less likely to be wrong.
+	- Because it means the probability of wrong rejection is small. 
+
+
+
+
+
+Question:
+Which hypothesis is easier to test?
+
+Options:
+
+	- H1
+	- H0 
+	- Roughly equal
+
+
+
+
+
+Question:
+What is the heuristic logic behind MLE?
+
+Options:
+
+	- Sample points look similar to each other.
+	- Events tend to happen in the most likely way. 
+	- Maximum values likely happen more often.
+
+
+
+
+
+Question:
+Does Q-Q plot require estimating parameters of a model?
+
+Options:
+
+	- No 
+	- Yes
+
+
+
+
+
+Question:
+Do sample points with higher-probability values carry more weights?
+
+Options:
+
+	- No 
+	- Yes
+
+
+
+
+
+Question:
+Why is it hard to choose a family of distributions in real applications?
+
+Options:
+
+	- Because true applications may not follow any distributions
+	- All of above 
+	- Because sample size is limited
+	- Because sample points are random outcomes.
+
+
+
+
+
+Question:
+How do you choose the number of class intervals?
+
+Options:
+
+	- Choose the square of the sample size
+	- Choose the sample size
+	- Choose the square root of the sample size 
+	- Choose a random number
+
+
+
+
+
+Question:
+Why is law of large numbers so important?
+
+Options:
+
+	- It connects random experiment with probability.
+	- All of the above. 
+	- It is the base why Monte Carlo method works
+	- It provides a way to calculate integral.
+
+
+
+
+
+Question:
+Why is normal distribution so important?
+
+Options:
+
+	- Because of central limit theorem 
+	- Because it is easy to calculate
+	- Because it is symmetric
+
+
+
+
+
+Question:
+What are the properties of Poisson processes?
+
+Options:
+
+	- Pooled Poisson processes is still Poisson
+	- Independent increments
+	- All of the above 
+	- Splitted Poisson processes are Poisson
+	- One arrival at a time
+
+
+
+
+
+Question:
+Why is Bernoulli distribution very important?
+
+Options:
+
+	- It is very simple.
+	- It is discrete.
+	- It is the foundation of many other distributions. 
+
+
+
+
+
+Question:
+Why is independence very useful?
+
+Options:
+
+	- It means RVs do not get helps from each other.
+	- It simplifies calculation. 
+	- It is closer to real situation.
+
+
+
+
+
+Question:
+What is the purpose of expectation?
+
+Options:
+
+	- To measure the central tendancy
+	- All of the above
+	- To indicate which value is the most likely to happen.
+	- A and B 
+	- To characterize a RV with a single value.
+
+
+
+
+
+Question:
+What is the major difference between  CDF and PMF (or PDF)?
+
+Options:
+
+	- It can work for both discrete and continous RVs.
+	- It can be used to calculate probabilities.
+	- It is nondecreasing function. 
+
+
+
+
+
+Question:
+What does discrete random variable mean?
+
+Options:
+
+	- It means the values of the random variable are finite or countably infinite. 
+	- It means the values of the random variable must be integer.
+	- It means the sample space is finite or countably infinite
+
+
+
+
+
+Question:
+What is the purpose of probability?
+
+Options:
+
+	- To find patterns in random outcomes 
+	- To make assumptions
+	- To make a random guess
+
+
+
+
+
+Question:
+What is the purpose of defining random variables?
+
+Options:
+
+	- To make events random
+	- To represent events with values 
+	- To show event are variable
+
+
+
+

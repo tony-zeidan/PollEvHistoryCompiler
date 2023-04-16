@@ -182,20 +182,91 @@ def to_tex_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None, *
     :param kwargs: keyword arguments for every tex block
     """
 
+    
+
     try: 
 
-        data_df['strquestion'] = data_df.apply(lambda x: tex_helper(x, **kwargs), axis=1)
+        lst = data_df.apply(lambda x: tex_helper(x, **kwargs), axis=1)
+
+        tex_gen = r'''
+\documentclass{exam}         
+\begin{document}
+
+\begin{questions}
+''' + '\n'.join(lst) + r'''
+\end{questions}
+
+\end{document}
+        '''
 
         with open(output_file, 'w', encoding=encoding) as out_file:
             
-            out_file.write(r"\begin{questions}" + "\n")
-            for i, row in data_df.iterrows():
-                
-                out_file.write(row['strquestion'])
+            out_file.write(tex_gen)
 
-            out_file.write(r"\end{questions}" + "\n")
+    except KeyError:
+        raise ValueError("Column couldn't be found, can't continue.")
+    
+def text_helper(
+        row,
+        show_correct: bool = True,
+        **kwargs
+    ) -> str:
+    """
+    Converts the current row into a LaTeX block question.
 
-        data_df.drop(columns=['strquestion'], inplace=True)
+
+    :param block_type: The LaTeX block type to use for the question title
+    :param resp_block_type: The LaTeX block type to use for the question responses (wrapped block)
+    :param resp_opt_block_type: The LaTeX block type to use for the question response option (if not correct)
+    :param resp_opt_correct_block_type: The LaTeX block type to use for the question response option (if correct)
+    :param remove_start_len: How far into the string to look when removing the question prefix
+    :param end_spacing: The amount of space to add after each response option
+    :param end_spacing_metric: The metric for end_spacing
+
+    :return: The string representing the LaTeX block
+    """
+
+    strbuilder = []
+
+    responses, title = get_title_and_responses(row, **kwargs)
+    title = change_tex_chars(title)
+
+    strbuilder.append(f"Question:\n{title}\n\nOptions:\n")
+    
+    for resp in responses['responses']:
+        resp_new = resp
+        strbuilder.append(f"\t- {resp_new}")
+
+    strbuilder.append("\n")
+    if show_correct:
+        strbuilder.append("Correct:\n")
+
+        for resp in responses['correct']:
+            strbuilder.append(f"\t- {resp}")
+
+    strbuilder.append("\n\n")
+
+    return "\n".join(strbuilder)
+    
+
+def to_txt_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None, show_correct: bool = True, **kwargs):
+    """
+    Converts the CSV dataframe into a LaTeX exam report.
+
+    :param data_df: The dataframe
+    :param output_file: The file to output to (.TeX)
+    :param encoding: The encoding to use when outputting
+    :param kwargs: keyword arguments for every tex block
+    """
+
+    try: 
+
+        lst = data_df.apply(lambda x: text_helper(x, show_correct=show_correct, **kwargs), axis=1)
+
+        text_gen = '\n'.join(lst)
+
+        with open(output_file, 'w', encoding=encoding) as out_file:
+            out_file.write(text_gen)
 
     except KeyError:
         raise ValueError("Column couldn't be found, can't continue.")
@@ -403,12 +474,13 @@ def main():
         remove_start_len = 5,
         shuffle_options = True,
         rhidden = False,
+        show_solutions = True,
         config = 'config.ini'
     )
 
     default_tex_opts = dict(
         block_type = 'question',
-        resp_block_type = 'openparboxes',
+        resp_block_type = 'oneparcheckboxes',
         resp_opt_block_type = 'choice',
         resp_opt_correct_block_type = 'CorrectChoice',
         end_spacing = 4,
@@ -434,6 +506,11 @@ def main():
     default_csv_opts = dict(
         
     )
+
+    default_text_opts = dict(
+        
+    )
+
 
 
     config_parser = argparse.ArgumentParser(add_help=False)
@@ -473,6 +550,9 @@ def main():
 
         elif default_io_opts['transform'] == 'toml' and 'pollev_transforms.toml' in config:
             default_toml_opts.update(update_defaults_config(default_csv_opts, config, 'pollev_transforms.toml'))
+
+        elif default_io_opts['transform'] == 'txt' and 'pollev_transforms.txt' in config:
+            default_toml_opts.update(update_defaults_config(default_csv_opts, config, 'pollev_transforms.txt'))
     
     except FileNotFoundError:
         parser.set_defaults(transform=default_io_opts['transform'])
@@ -482,6 +562,7 @@ def main():
     global_parser = argparse.ArgumentParser(description='Read CSV file with optional screen name filter', add_help=False)
     global_parser.add_argument('--config_path', type=str, help='Path to the configuration file (optional)', default=default_io_opts['config'])
     global_parser.add_argument('--rhidden', help='Remove questions with hidden titles', default=default_io_opts['rhidden'], action='store_true')
+    global_parser.add_argument('--nosolutions', help='Remove solutions', default=default_io_opts['show_solutions'], action='store_false')
     global_parser.add_argument('--presenter', type=str, help='Presenter name to filter (optional)', default=None)
     global_parser.add_argument('--output_path', type=str, help='Path for output file (optional)', default=default_io_opts['output_path'])
     global_parser.add_argument('--encoding', type=str, help='Encoding for reading and writing (optional)', default=default_io_opts['encoding'])
@@ -519,6 +600,9 @@ def main():
     # TOML transform
     parser_toml = transform_parser.add_parser('toml', help='Convert to TOML', parents=[global_parser], add_help=True)
 
+    # TXT transform
+    parser_text = transform_parser.add_parser('txt', help='Convert to TXT', parents=[global_parser], add_help=True)
+
     parser.set_defaults(transform=default_io_opts['transform'])
     args = parser.parse_args(remaining_argv)
     data_df = read_csv_file(args.file_path, presenter=args.presenter, encoding=args.encoding, rhidden=args.rhidden)
@@ -542,6 +626,9 @@ def main():
             pass
     elif args.transform == 'toml':
         to_toml_report(data_df, os.path.join(args.output_path, f'{name}.toml'), encoding=args.encoding, **update_defaults(args, default_toml_opts))
+    elif args.transform == 'txt':
+        to_txt_exam(data_df, os.path.join(args.output_path, f'{name}.txt'), encoding=args.encoding, show_correct=args.nosolutions, **update_defaults(args, default_text_opts))
+    
     else:
         raise ValueError("You can't use that type of output transform, look at the docs for help.")
 

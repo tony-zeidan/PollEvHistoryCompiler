@@ -11,3 +11,10 @@ Good options include presenter name:
 ```
 python reader.py <INPUT CSV> <TRANSFORM (json, yaml, toml, etc.)>  --output-file <OUTPUT PATH (dir)> --presenter <NAME> <OPTIONS>
 ```
+
+Remove hidden questions from the result:
+```
+python reader.py <INPUT CSV> <TRANSFORM (json, yaml, toml, etc.)>  --output-file <OUTPUT PATH (dir)> --rhidden
+```
+
+## Documentation
