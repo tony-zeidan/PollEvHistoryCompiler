@@ -79,9 +79,11 @@ def read_csv_file(
     if rhidden:
         data_df = data_df[data_df[question_col] != "~hidden~"]
 
+    
+
     # remove image entries
     if rimages:
-        data_df = ~(data_df[question_col].str.contains(image_in_str) | data_df[response_col].str.contains(image_in_str))
+        data_df = data_df[~(data_df[question_col].str.contains(image_in_str) | data_df[response_col].str.contains(image_in_str))]
 
 
     # split and maybe shuffle
@@ -90,6 +92,8 @@ def read_csv_file(
             lst = row.split(response_options_delim)
             random.shuffle(lst)
             return lst
+        
+        print(data_df.columns)
         data_df['split_responses'] = data_df[response_col].apply(split_shuffle)
     else:
         data_df['split_responses'] = data_df[response_col].apply(lambda x: x.split(response_options_delim))
@@ -303,7 +307,7 @@ def html_helper(
 
     return "\n".join(strbuilder)
 
-def to_html_report(data_df: pd.DataFrame, output_file: str, encoding: str = None):
+def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, encoding: str = None):
     """
     Converts the CSV dataframe into a LaTeX exam report.
 
@@ -315,7 +319,7 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, encoding: str = None
     try: 
         name, _ = os.path.splitext(output_file)
 
-        html_lst =  '\n'.join(data_df.apply(lambda x: html_helper(x), axis=1))
+        html_lst =  '\n'.join(data_df.apply(lambda x: html_helper(x, show_correct=show_correct), axis=1))
 
         html_gen = f'''
 <!DOCTYPE html>
