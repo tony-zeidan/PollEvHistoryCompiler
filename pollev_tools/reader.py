@@ -324,12 +324,18 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha384-KyZXEAg3QhqLMpG8r+Knujsl5/1zwaQ7wxt2NN9138DhxUeK5l/5Vp1+XWlFm_tv" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway&display=swap" />
     <link rel="stylesheet" href="html-styles.css">
     <title>{name}</title>
 </head> 
 <body>
-    <h1>PollEverywhere Report</h1>           
-    {html_lst}
+    <div class='center-container'>
+        <div class='center-div'>
+            <h1>PollEverywhere Report</h1>
+        </div>          
+        {html_lst}
+    </div>
 </body>
 </html>
         '''
@@ -486,6 +492,11 @@ def main():
     Main script executable.
     """
 
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    res_path = config_path = os.path.join(base_dir, "resources") 
+    config_path = os.path.join(res_path, "config.ini") 
+    styles_path = os.path.join(res_path, "html-styles.css")
+
     # define default values
     default_io_opts = dict(
         output_path = os.getcwd(),
@@ -496,7 +507,7 @@ def main():
         remove_hidden = False,
         remove_images = False,
         show_solutions = True,
-        config = 'config.ini'
+        config = config_path
     )
 
     default_tex_opts = dict(
@@ -631,6 +642,7 @@ def main():
     show_correct = (not args.nosolutions)
 
     # check transform type
+    
     if args.transform == 'tex':
         to_tex_exam(data_df, os.path.join(args.output_path, f'{name}.tex'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_tex_opts))
     elif args.transform == 'yaml':
@@ -640,11 +652,19 @@ def main():
     elif args.transform == 'csv':
         to_csv_report(data_df, os.path.join(args.output_path, f'{name}.csv'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_csv_opts))
     elif args.transform == 'html':
-        to_html_report(data_df, os.path.join(args.output_path, f'{name}.html'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_html_opts))
+        # Handle HTML differently (placed in it's own directory with the CSS file copied over)
+
+        html_path = os.path.join(args.output_path, f'{name}-html')
+        try:
+            os.mkdir(html_path)
+        except Exception:
+            pass
+        
+        to_html_report(data_df, os.path.join(html_path, f'{name}.html'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_html_opts))
         
         # copy over the CSS file
         try:
-            shutil.copyfile('html-styles.css', os.path.join(args.output_path, f'html-styles.css'))
+            shutil.copyfile(styles_path, os.path.join(html_path, f'html-styles.css'))
         except Exception:
             pass
     elif args.transform == 'toml':
