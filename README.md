@@ -25,19 +25,19 @@ pip install pollev-history-compiler
 ## Usage
 It works as follows as a command-line script.
 ```
-python reader.py <INPUT CSV> <TRANSFORM (json, yaml, toml, etc.)> --output-file <OUTPUT PATH (dir)> <OPTIONS>
+pollev-compiler <INPUT CSV> <TRANSFORM (json, yaml, toml, etc.)> --output-file <OUTPUT PATH (dir)> <OPTIONS>
 ```
 
 If no output path is supplied, the script will use the 
 
 Good options include presenter name:
 ```
-python reader.py <INPUT CSV> <TRANSFORM (json, yaml, toml, etc.)>  --output-file <OUTPUT PATH (dir)> --presenter <NAME> <OPTIONS>
+pollev-compiler <INPUT CSV> <TRANSFORM (json, yaml, toml, etc.)>  --output-file <OUTPUT PATH (dir)> --presenter <NAME> <OPTIONS>
 ```
 
 Remove hidden questions from the result:
 ```
-python reader.py <INPUT CSV> <TRANSFORM (json, yaml, toml, etc.)>  --output-file <OUTPUT PATH (dir)> --rhidden
+pollev-compiler <INPUT CSV> <TRANSFORM (json, yaml, toml, etc.)>  --output-file <OUTPUT PATH (dir)> --rhidden
 ```
 
 ## Documentation
