@@ -6,15 +6,11 @@ Right now most of the support is for `Multiple choice` type polls.
 
 ## Installation
 There are two approaches to the installation of this package/script.
-1) 
-
 Clone the repository, and within the root folder run:
 
 ```
 pip install .
 ```
-
-2)
 
 Install the package from PyPI:
 
