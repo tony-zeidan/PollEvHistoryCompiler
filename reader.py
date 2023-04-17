@@ -93,7 +93,6 @@ def read_csv_file(
             random.shuffle(lst)
             return lst
         
-        print(data_df.columns)
         data_df['split_responses'] = data_df[response_col].apply(split_shuffle)
     else:
         data_df['split_responses'] = data_df[response_col].apply(lambda x: x.split(response_options_delim))
