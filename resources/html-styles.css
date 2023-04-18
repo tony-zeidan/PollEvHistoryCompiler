@@ -25,5 +25,13 @@ body, html {
 }
 
 .correct {
-    background-color: yellowgreen
+    background-color: yellowgreen;
+}
+
+.correct-selected {
+    background-color: yellowgreen;
+}
+
+.incorrect-selected {
+    background-color: red;
 }
