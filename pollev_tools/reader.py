@@ -347,6 +347,44 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
 
     except KeyError:
         raise ValueError("Column couldn't be found, can't continue.")
+    
+def to_markdown_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, encoding: str = None):
+    """
+    Converts the CSV dataframe into a LaTeX exam report.
+
+    :param data_df: The dataframe
+    :param output_file: The file to output to (.TeX)
+    :param encoding: The encoding to use when outputting
+    """
+    import markdownify
+
+    name, _ = os.path.splitext(output_file)
+
+    html_lst =  '\n'.join(data_df.apply(lambda x: html_helper(x, show_correct=show_correct), axis=1))
+
+    html_gen = f'''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha384-KyZXEAg3QhqLMpG8r+Knujsl5/1zwaQ7wxt2NN9138DhxUeK5l/5Vp1+XWlFm_tv" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway&display=swap" />
+    <link rel="stylesheet" href="html-styles.css">
+    <title>{name}</title>
+</head> 
+<body>
+    <div class='center-container'>
+        <div class='center-div'>
+            <h1>PollEverywhere Report</h1>
+        </div>          
+        {html_lst}
+    </div>
+</body>
+</html>
+        '''
+
+    md_str = markdownify.markdownify(html_gen)
+    with open(output_file, 'w', encoding=encoding) as out_file:
+        out_file.write(md_str)
 
 
 def dict_helper(row, show_correct: bool = True, question_col: str = 'Activity title'):
@@ -614,6 +652,9 @@ def main():
     # HTML transform
     parser_html = transform_parser.add_parser('html', help='Convert to HTML', parents=[global_parser], add_help=True)
 
+    # Markdown transform
+    parser_markdown = transform_parser.add_parser('markdown', help='Convert to MARKDOWN', parents=[global_parser], add_help=True)
+
     # YAML transform
     parser_yaml = transform_parser.add_parser('yaml', help='Convert to YAML', parents=[global_parser], add_help=True)
     parser_yaml.add_argument('--root_name', type=str, help='Root name of YAML', default=default_yaml_opts['root_name'])
@@ -669,6 +710,8 @@ def main():
             pass
     elif args.transform == 'toml':
         to_toml_report(data_df, os.path.join(args.output_path, f'{name}.toml'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_toml_opts))
+    elif args.transform == 'markdown':
+        to_markdown_report(data_df, os.path.join(args.output_path, f'{name}.md'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_toml_opts))
     elif args.transform == 'txt':
         to_txt_exam(data_df, os.path.join(args.output_path, f'{name}.txt'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_text_opts))
     

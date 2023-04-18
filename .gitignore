@@ -11,6 +11,8 @@ __pycache__/
 *.html
 *.toml
 *.txt
+*.md
+!README.md
 
 # C extensions
 *.so

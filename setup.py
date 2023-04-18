@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="pollev-history-compiler",
-    version="1.0.1",
+    version="1.0.2",
     author="Tony Abou Zeidan",
     author_email="tony.azp25@gmail.com",
     description="A script for the compilation of PollEverywhere history CSV files into more usable forms.",
@@ -23,7 +23,8 @@ setup(
     ],
     python_requires=">=3.6",
     install_requires=[
-        'pandas'
+        'pandas',
+        'markdownify'
     ],
     package_data={
         "pollev_tools": [
