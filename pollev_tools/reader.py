@@ -271,6 +271,7 @@ def html_helper(
         correct_class: str = 'correct',
         incorrect_class: str = 'incorrect',
         show_correct: bool = True,
+        quiz_mode: bool = False,
         **kwargs
     ) -> str:
     """
@@ -306,7 +307,7 @@ def html_helper(
 
     return "\n".join(strbuilder)
 
-def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, encoding: str = None):
+def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool = True, quiz_mode: bool = False, encoding: str = None):
     """
     Converts the CSV dataframe into a LaTeX exam report.
 
@@ -320,11 +321,16 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
 
         html_lst =  '\n'.join(data_df.apply(lambda x: html_helper(x, show_correct=show_correct), axis=1))
 
+        quiz_mode_script = ''
+        if quiz_mode:
+            quiz_mode_script = "<script type='text/javascript' src='html-js.js'/>"
+
         html_gen = f'''
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha384-KyZXEAg3QhqLMpG8r+Knujsl5/1zwaQ7wxt2NN9138DhxUeK5l/5Vp1+XWlFm_tv" crossorigin="anonymous"></script>
+    {quiz_mode_script}
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway&display=swap" />
     <link rel="stylesheet" href="html-styles.css">
     <title>{name}</title>
@@ -558,7 +564,7 @@ def main():
     )
 
     default_html_opts = dict(
-
+        quiz_mode = False
     )
 
     default_json_opts = dict(
@@ -578,6 +584,10 @@ def main():
     )
 
     default_text_opts = dict(
+        
+    )
+
+    default_md_opts = dict(
         
     )
 
@@ -612,11 +622,14 @@ def main():
             default_csv_opts.update(update_defaults_config(default_csv_opts, config, 'pollev_transforms.csv'))
 
         elif default_io_opts['transform'] == 'toml' and 'pollev_transforms.toml' in config:
-            default_toml_opts.update(update_defaults_config(default_csv_opts, config, 'pollev_transforms.toml'))
+            default_toml_opts.update(update_defaults_config(default_toml_opts, config, 'pollev_transforms.toml'))
 
         elif default_io_opts['transform'] == 'txt' and 'pollev_transforms.txt' in config:
-            default_toml_opts.update(update_defaults_config(default_csv_opts, config, 'pollev_transforms.txt'))
+            default_text_opts.update(update_defaults_config(default_text_opts, config, 'pollev_transforms.txt'))
     
+        elif default_io_opts['transform'] == 'markdown' and 'pollev_transforms.md' in config:
+            default_md_opts.update(update_defaults_config(default_csv_opts, config, 'pollev_transforms.md'))
+
     except FileNotFoundError:
         parser.set_defaults(transform=default_io_opts['transform'])
         args, _ = parser.parse_known_args(remaining_argv)
@@ -651,7 +664,8 @@ def main():
     
     # HTML transform
     parser_html = transform_parser.add_parser('html', help='Convert to HTML', parents=[global_parser], add_help=True)
-
+    parser_html.add_argument('--quiz_mode', help='Change the HTML into an interactable quiz!', default=default_html_opts['quiz_mode'], action='store_true')
+    
     # Markdown transform
     parser_markdown = transform_parser.add_parser('markdown', help='Convert to MARKDOWN', parents=[global_parser], add_help=True)
 
