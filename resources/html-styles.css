@@ -4,20 +4,23 @@ body {
 
 body, html {
     height: 100%;
-    margin: 0;
 }
   
 .center-container {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 100%;
+    width: 600px;
 }
 
-.centered-div {
-    text-align: left;
-    min-width: 500px;
-    max-width: 600px;
+.question-responses {
+    align-items: center;
+}
+
+.question-title {
+    font-weight: 600; 
 }
 
 .centered-div h1 {

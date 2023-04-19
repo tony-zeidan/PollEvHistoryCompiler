@@ -7,6 +7,7 @@ import random
 import configparser
 import shutil
 from collections import OrderedDict
+import uuid
 
 TEX_CHARS_ESCAPE = ['%']
 QUESTION_START_CHARS = [')', '.', ']', '&']
@@ -271,6 +272,9 @@ def html_helper(
         response_options_class: str = 'options',
         correct_class: str = 'correct',
         incorrect_class: str = 'incorrect',
+        question_class: str = 'question-title',
+        group_class: str = 'question-responses',
+        tab_start: int = 2,
         show_correct: bool = True,
         **kwargs
     ) -> str:
@@ -290,20 +294,25 @@ def html_helper(
     title = row[title_col]
     title = change_tex_chars(title)
 
-    strbuilder.append(rf'<li>{title}</li>')
+    question_ID = str(uuid.uuid4())
 
-    strbuilder.append(f'\t<ol type="a" class="{response_options_class}">')
+    tabs = lambda c: "\t"*c
+
+    strbuilder.append(rf'{tabs(tab_start)}<div class="{group_class}">')
+    strbuilder.append(f'{tabs(tab_start+1)}<p class="{question_class}" data-linked-id="{question_ID}">{title}</p>')
+    strbuilder.append(f'{tabs(tab_start+1)}<ol type="a" class="{response_options_class}" data-linked-id="{question_ID}">')
     for resp in row['split_responses']:
         resp_new = resp
         if resp in row['split_correct_responses']:
             if show_correct:
-                strbuilder.append(f'\t\t<li class="{correct_class}">{resp_new}</li>')
+                strbuilder.append(f'{tabs(tab_start+2)}<li class="{correct_class}">{resp_new}</li>')
             else:
-                strbuilder.append(f'\t\t<li>{resp_new}</li>')
+                strbuilder.append(f'{tabs(tab_start+2)}<li>{resp_new}</li>')
         else:
-            strbuilder.append(f'\t\t<li class="{incorrect_class}">{resp_new}</li>')
+            strbuilder.append(f'{tabs(tab_start+2)}<li class="{incorrect_class}">{resp_new}</li>')
 
-    strbuilder.append('\t</ol>\n')
+    strbuilder.append(f'{tabs(tab_start+1)}</ol>')
+    strbuilder.append(f'{tabs(tab_start)}</div>\n')
 
     return "\n".join(strbuilder)
 
@@ -321,7 +330,7 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
 
         quiz_mode_script = ''
         if quiz_mode:
-            quiz_mode_script = "<script type='text/javascript' src='html-js.js'/>"
+            quiz_mode_script = "<script type='text/javascript' src='html-js.js'></script>"
 
         html_lst = '\n'.join(data_df.apply(lambda x: html_helper(x, show_correct=show_correct), axis=1))
 
@@ -329,7 +338,6 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha384-KyZXEAg3QhqLMpG8r+Knujsl5/1zwaQ7wxt2NN9138DhxUeK5l/5Vp1+XWlFm_tv" crossorigin="anonymous"></script>
     {quiz_mode_script}
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway&display=swap" />
     <link rel="stylesheet" href="html-styles.css">
@@ -340,7 +348,7 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
         <div class='center-div'>
             <h1>PollEverywhere Report</h1>
         </div>          
-        {html_lst}
+{html_lst}
     </div>
 </body>
 </html>
