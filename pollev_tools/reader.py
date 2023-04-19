@@ -268,10 +268,10 @@ def to_txt_exam(data_df: pd.DataFrame, output_file: str, encoding: str = None, s
 def html_helper(
         row,
         title_col: str = 'Activity title',
+        response_options_class: str = 'options',
         correct_class: str = 'correct',
         incorrect_class: str = 'incorrect',
         show_correct: bool = True,
-        quiz_mode: bool = False,
         **kwargs
     ) -> str:
     """
@@ -292,16 +292,16 @@ def html_helper(
 
     strbuilder.append(rf'<li>{title}</li>')
 
-    strbuilder.append('\t<ol type="a">')
+    strbuilder.append(f'\t<ol type="a" class="{response_options_class}">')
     for resp in row['split_responses']:
         resp_new = resp
         if resp in row['split_correct_responses']:
             if show_correct:
-                strbuilder.append(f"\t\t<li class={correct_class}>{resp_new}</li>")
+                strbuilder.append(f'\t\t<li class="{correct_class}">{resp_new}</li>')
             else:
-                strbuilder.append(f"\t\t<li>{resp_new}</li>")
+                strbuilder.append(f'\t\t<li>{resp_new}</li>')
         else:
-            strbuilder.append(f"\t\t<li class={incorrect_class}>{resp_new}</li>")
+            strbuilder.append(f'\t\t<li class="{incorrect_class}">{resp_new}</li>')
 
     strbuilder.append('\t</ol>\n')
 
@@ -319,11 +319,11 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
     try: 
         name, _ = os.path.splitext(output_file)
 
-        html_lst =  '\n'.join(data_df.apply(lambda x: html_helper(x, show_correct=show_correct), axis=1))
-
         quiz_mode_script = ''
         if quiz_mode:
             quiz_mode_script = "<script type='text/javascript' src='html-js.js'/>"
+
+        html_lst = '\n'.join(data_df.apply(lambda x: html_helper(x, show_correct=show_correct), axis=1))
 
         html_gen = f'''
 <!DOCTYPE html>
@@ -345,8 +345,6 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
 </body>
 </html>
         '''
-
-        
 
         with open(output_file, 'w', encoding=encoding) as out_file:
             out_file.write(html_gen)
@@ -540,6 +538,7 @@ def main():
     res_path = config_path = os.path.join(base_dir, "resources") 
     config_path = os.path.join(res_path, "config.ini") 
     styles_path = os.path.join(res_path, "html-styles.css")
+    js_path = os.path.join(res_path, "html-js.js")
 
     # define default values
     default_io_opts = dict(
@@ -717,9 +716,13 @@ def main():
         
         to_html_report(data_df, os.path.join(html_path, f'{name}.html'), encoding=args.encoding, show_correct=show_correct, **update_defaults(args, default_html_opts))
         
-        # copy over the CSS file
+        # copy over the CSS and JS file
         try:
             shutil.copyfile(styles_path, os.path.join(html_path, f'html-styles.css'))
+
+            # only copy js if quiz mode
+            if args.quiz_mode:
+                shutil.copyfile(js_path, os.path.join(html_path, f'html-js.js'))
         except Exception:
             pass
     elif args.transform == 'toml':
