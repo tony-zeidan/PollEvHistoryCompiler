@@ -335,12 +335,11 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
             page_title = 'Polls Quiz'
             page_heading = 'Polls Quiz'
             html_lst_values = data_df.apply(lambda x: html_helper(x, show_correct=show_correct), axis=1)
-            page_bar = f'''
-<div class='counter-bar'>
-    <p id='counter' data-maximum="{len(html_lst_values)}" data-curr="0">0/{len(html_lst_values)}</p>
-    <button class='reset'>Reset</button>
-</div>
-            '''
+            page_bar = f'''<div class='counter-bar'>
+            <p id='counter' data-maximum="{len(html_lst_values)}" data-curr="0">0/{len(html_lst_values)}</p>
+            <button class='reset'>Reset</button>
+        </div>'''
+
         else:
             html_lst_values = data_df.apply(lambda x: html_helper(x, show_correct=show_correct, correct_class='correct-quiz-selected'), axis=1)
         html_lst = '\n'.join(html_lst_values)
