@@ -5,14 +5,54 @@ body {
 body, html {
     height: 100%;
 }
+
+button {
+    background-color: white;
+    border-radius: 5px;
+}
+
+button:hover {
+    background-color: whitesmoke;
+}
+
+.counter-bar {
+    background-color: white;
+    width: 600px;
+    display: flex;
+    flex-direction: row;
+    justify-content: end;
+    position: fixed;
+    z-index: 50;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    top: 0;
+    height: fit-content;
+    gap: 12px;
+}
+
+.counter-bar .reset {
+    height: 35px;
+}
+
+.counter-bar p {
+    text-align: center;
+    margin: 0;
+}
   
 .center-container {
+    padding-top: 100px;
+    position: relative;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    justify-content: start;
+    margin-top: 40px;
     min-height: 100%;
+    margin: auto auto;
     width: 600px;
+}
+
+#bottom-reset {
+    margin-bottom: 20px;
 }
 
 .question-responses {
@@ -23,7 +63,7 @@ body, html {
     font-weight: 600; 
 }
 
-.centered-div h1 {
+.centered-div {
     text-align: center;
 }
 

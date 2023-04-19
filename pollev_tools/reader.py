@@ -326,13 +326,12 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
     """
 
     try: 
-        name, _ = os.path.splitext(output_file)
-
         quiz_mode_script = ''
         if quiz_mode:
             quiz_mode_script = "<script type='text/javascript' src='html-js.js'></script>"
 
-        html_lst = '\n'.join(data_df.apply(lambda x: html_helper(x, show_correct=show_correct), axis=1))
+        html_lst_values = data_df.apply(lambda x: html_helper(x, show_correct=show_correct), axis=1)
+        html_lst = '\n'.join(html_lst_values)
 
         html_gen = f'''
 <!DOCTYPE html>
@@ -341,14 +340,21 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
     {quiz_mode_script}
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway&display=swap" />
     <link rel="stylesheet" href="html-styles.css">
-    <title>{name}</title>
+    <title>Extracted Polls</title>
 </head> 
 <body>
     <div class='center-container'>
+        <div class='counter-bar'>
+            <p id='counter' data-maximum="{len(html_lst_values)}" data-curr="0">0/{len(html_lst_values)}</p>
+            <button class='reset'>Reset</button>
+        </div>
         <div class='center-div'>
             <h1>PollEverywhere Report</h1>
         </div>          
 {html_lst}
+        <div>
+            <button class='reset' id='bottom-reset'>Reset Quiz</button>
+        </div>
     </div>
 </body>
 </html>
@@ -388,7 +394,7 @@ def to_markdown_report(data_df: pd.DataFrame, output_file: str, show_correct: bo
         <div class='center-div'>
             <h1>PollEverywhere Report</h1>
         </div>          
-        {html_lst}
+{html_lst}
     </div>
 </body>
 </html>
