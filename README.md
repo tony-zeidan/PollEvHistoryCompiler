@@ -33,7 +33,26 @@ pollev-compiler <INPUT CSV> <TRANSFORM (json, yaml, toml, etc.)>  --output-file 
 
 Remove hidden questions from the result:
 ```
-pollev-compiler <INPUT CSV> <TRANSFORM (json, yaml, toml, etc.)>  --output-file <OUTPUT PATH (dir)> --rhidden
+pollev-compiler <INPUT CSV> <TRANSFORM (json, yaml, toml, etc.)>  --output-file <OUTPUT PATH (dir)> --remove_hidden
 ```
+
+Remove image-related questions from the result:
+```
+pollev-compiler <INPUT CSV> <TRANSFORM (json, yaml, toml, etc.)>  --output-file <OUTPUT PATH (dir)> --remove_images
+```
+
+Markdown format is now supported! 
+```
+pollev-compiler <INPUT CSV> markdown
+```
+This process uses `markdownify` to turn the pre-existing HTML functionality into a markdown file.
+
+You can now use the `--quiz_mode` option in the `html` transform to turn the output to a interactable quiz that highlights your guesses,
+and your score on the quiz (correct over total). You can do this like:
+```
+pollev-compiler <INPUT CSV> html --quiz_mode
+```
+The output consists of a JavaScript file, CSS file, and HTML file. Without quiz mode, the JavaScript file isn't added.
+
 
 ## Documentation
