@@ -327,10 +327,22 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
 
     try: 
         quiz_mode_script = ''
+        page_title = 'Extracted Polls'
+        page_heading = 'Polls Report'
+        page_bar = ''
         if quiz_mode:
             quiz_mode_script = "<script type='text/javascript' src='html-js.js'></script>"
-
-        html_lst_values = data_df.apply(lambda x: html_helper(x, show_correct=show_correct), axis=1)
+            page_title = 'Polls Quiz'
+            page_heading = 'Polls Quiz'
+            html_lst_values = data_df.apply(lambda x: html_helper(x, show_correct=show_correct), axis=1)
+            page_bar = f'''
+<div class='counter-bar'>
+    <p id='counter' data-maximum="{len(html_lst_values)}" data-curr="0">0/{len(html_lst_values)}</p>
+    <button class='reset'>Reset</button>
+</div>
+            '''
+        else:
+            html_lst_values = data_df.apply(lambda x: html_helper(x, show_correct=show_correct, correct_class='correct-quiz-selected'), axis=1)
         html_lst = '\n'.join(html_lst_values)
 
         html_gen = f'''
@@ -340,16 +352,13 @@ def to_html_report(data_df: pd.DataFrame, output_file: str, show_correct: bool =
     {quiz_mode_script}
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway&display=swap" />
     <link rel="stylesheet" href="html-styles.css">
-    <title>Extracted Polls</title>
+    <title>{page_title}</title>
 </head> 
 <body>
     <div class='center-container'>
-        <div class='counter-bar'>
-            <p id='counter' data-maximum="{len(html_lst_values)}" data-curr="0">0/{len(html_lst_values)}</p>
-            <button class='reset'>Reset</button>
-        </div>
+        {page_bar}
         <div class='center-div'>
-            <h1>PollEverywhere Report</h1>
+            <h1>{page_heading}</h1>
         </div>          
 {html_lst}
         <div>
